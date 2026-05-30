@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }} - Pastelería Yaz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%);
+            color: #3d2817;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #d4a373 0%, #c99963 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        header a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.2em;
+            float: left;
+            font-weight: 600;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .product-detail {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .product-image-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c0 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 150px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-image.no-image {
+            font-size: 120px;
+            opacity: 0.7;
+        }
+
+        .product-info-section h2 {
+            font-size: 2.2em;
+            color: #3d2817;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .product-category {
+            display: inline-block;
+            background: #fae8d6;
+            color: #8b6914;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .product-price {
+            font-size: 2.5em;
+            color: #d4a373;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .product-description {
+            font-size: 1em;
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .product-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            color: #3d2817;
+            font-weight: 700;
+        }
+
+        .stock-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .stock-status.available {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .stock-status.low {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .stock-status.unavailable {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #d4a373;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .back-btn:hover {
+            background: #c99963;
+            transform: translateX(-5px);
+        }
+
+        footer {
+            background: #3d2817;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .product-detail {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                padding: 20px;
+            }
+
+            .product-image {
+                height: 300px;
+                font-size: 100px;
+            }
+
+            .product-info-section h2 {
+                font-size: 1.8em;
+            }
+
+            .product-price {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="{% url 'gallery' %}">← Volver a Galería</a>
+        <h1>🥐 Pastelería Yaz</h1>
+    </header>
+
+    <div class="container">
+        <a href="{% url 'gallery' %}" class="back-btn">← Volver a Galería</a>
+
+        <div class="product-detail">
+            <div class="product-image-section">
+                <div class="product-image {% if not product.image %}no-image{% endif %}">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                    {% else %}
+                        🥐
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="product-info-section">
+                <span class="product-category">{{ product.get_category_display }}</span>
+                <h2>{{ product.name }}</h2>
+                <p style="color: #999; font-size: 0.95em; margin-bottom: 20px;">ID: {{ product.id }}</p>
+                
+                <div class="product-description">
+                    {{ product.description }}
+                </div>
+
+                {% if product.ingredients.all %}
+                    <div style="margin-bottom: 30px; padding: 20px; background: #faf8f3; border-radius: 8px;">
+                        <h3 style="color: #3d2817; margin-bottom: 15px; font-size: 1.2em;">📋 Ingredientes Principales</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            {% for ingredient in product.ingredients.all %}
+                                <li style="padding: 8px 0; color: #555; border-bottom: 1px solid #e8d4c0;">
+                                    {{ ingredient.raw_product.name }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <a href="{% url 'gallery' %}" class="back-btn" style="display: block; text-align: center;">Seguir Comprando</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>✨ Hecho con amor e ingredientes frescos ✨</p>
+    </footer>
+</body>
+</html>

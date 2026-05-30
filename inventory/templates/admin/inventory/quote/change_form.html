@@ -1,0 +1,16 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block submit_buttons_bottom %}
+  {{ block.super }}
+  {% if original and original.status != 'rejected' and original.status != 'expired' %}
+  <div class="submit-row" style="margin-top:8px;">
+    <a href="{% url 'admin:quote_convert_to_order' original.pk %}"
+       class="button"
+       style="background:#417690;color:#fff;padding:8px 16px;text-decoration:none;border-radius:4px;font-weight:bold;"
+       onclick="return confirm('Convert this quote to an order? Raw material availability will be checked first.');">
+      🔄 Convert to Order
+    </a>
+  </div>
+  {% endif %}
+{% endblock %}

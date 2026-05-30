@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Materias Primas - Pastelería Yaz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%);
+            color: #3d2817;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #d4a373 0%, #c99963 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: #d4a373;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .back-btn:hover {
+            background: #c99963;
+            transform: translateX(-5px);
+        }
+
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls label {
+            font-weight: 600;
+            color: #3d2817;
+        }
+
+        .controls select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            background: #d4a373;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .controls button:hover {
+            background: #c99963;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #d4a373;
+        }
+
+        .summary-label {
+            font-size: 0.85em;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .summary-value {
+            font-size: 2.2em;
+            color: #d4a373;
+            font-weight: 700;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            color: #3d2817;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #d4a373;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table thead {
+            background: linear-gradient(135deg, #d4a373 0%, #c99963 100%);
+            color: white;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        table tbody tr:hover {
+            background: #faf8f3;
+        }
+
+        .material-id {
+            color: #999;
+            font-size: 0.85em;
+        }
+
+        .money {
+            color: #d4a373;
+            font-weight: 600;
+        }
+
+        .stock-high {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .stock-low {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .no-data {
+            padding: 40px;
+            text-align: center;
+            color: #999;
+        }
+
+        footer {
+            background: #3d2817;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 0.9em;
+            }
+
+            table th, table td {
+                padding: 10px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .controls select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔧 Reporte de Materias Primas</h1>
+    </header>
+
+    <div class="container">
+        <a href="{% url 'admin_dashboard' %}" class="back-btn">← Volver al Dashboard</a>
+
+        <div class="controls">
+            <form method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <label for="provider">Filtrar por Proveedor:</label>
+                    <select name="provider" id="provider">
+                        <option value="">-- Todos los Proveedores --</option>
+                        {% for prov in providers %}
+                            <option value="{{ prov.id }}" {% if selected_provider == prov.id|stringformat:"s" %}selected{% endif %}>{{ prov.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit">Filtrar</button>
+                <a href="{% url 'raw_materials_report' %}" class="back-btn" style="margin: 0;">Limpiar Filtros</a>
+            </form>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card">
+                <div class="summary-label">Valor Total de Materias Primas</div>
+                <div class="summary-value">${{ total_value|floatformat:2 }}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Artículos en Inventario</div>
+                <div class="summary-value">{{ materials|length }}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">⚠️ Stock Bajo</div>
+                <div class="summary-value" style="color: #ffc107;">{{ low_stock_count }}</div>
+            </div>
+        </div>
+
+        <h3 class="section-title">📋 Inventario de Materias Primas</h3>
+
+        {% if materials %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Material</th>
+                            <th>Marca</th>
+                            <th>Proveedor</th>
+                            <th>Unidad</th>
+                            <th>Cantidad</th>
+                            <th>Costo Unit.</th>
+                            <th>Valor Total</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for material in materials %}
+                            <tr>
+                                <td><span class="material-id">#{{ material.id }}</span></td>
+                                <td><strong>{{ material.name }}</strong></td>
+                                <td>{{ material.brand|default:"—" }}</td>
+                                <td>{{ material.provider }}</td>
+                                <td>{{ material.unit }}</td>
+                                <td>
+                                    {% if material.is_low_stock %}
+                                        <span class="stock-low">{{ material.quantity }} (Límite: {{ material.reorder_level }})</span>
+                                    {% else %}
+                                        <span class="stock-high">{{ material.quantity }} ✓</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="money">${{ material.cost|floatformat:2 }}</span></td>
+                                <td><span class="money">${{ material.value|floatformat:2 }}</span></td>
+                                <td>
+                                    {% if material.is_low_stock %}
+                                        <span class="stock-low">⚠️ Bajo</span>
+                                    {% else %}
+                                        <span class="stock-high">✓ OK</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="table-container">
+                <div class="no-data">
+                    <p>No hay materias primas en el inventario.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p>✨ Sistema de Gestión - Pastelería Yaz ✨</p>
+    </footer>
+</body>
+</html>
