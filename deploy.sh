@@ -28,7 +28,7 @@ case $ENV in
         git add .
         git commit -m "$COMMIT_MSG" --allow-empty
         git push
-        ssh root@ubuntu-16gb-nbg1-1 <<EOF
+        ssh root@5.75.162.179 <<EOF
 cd /app/pasteleriayaz
 git pull
 docker compose -f docker-compose.prod.yml --env-file .env.prod down
