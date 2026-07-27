@@ -1,0 +1,227 @@
+{% extends 'control/base.html' %}
+{% block title %}Nueva Cotización - Pastelería Yaz{% endblock %}
+{% block page_title %}📄 Nueva Cotización{% endblock %}
+
+{% block content %}
+<style>
+    .maker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start; }
+    .price-display { padding: 10px 0; }
+    .price-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95em; color: #555; }
+    .price-row.total { border-top: 2px solid #d4a373; margin-top: 8px; padding-top: 12px; font-weight: 700; color: #3d2817; font-size: 1.15em; }
+    .price-row .value { font-weight: 600; }
+    .inline-add { margin-top: 6px; }
+    .inline-add a { color: #d4a373; font-size: 0.85em; cursor: pointer; text-decoration: none; }
+    .inline-add a:hover { text-decoration: underline; }
+    @media (max-width: 768px) { .maker-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="maker-grid">
+    <div class="card">
+        <h3 style="margin-bottom:20px;">📋 Parámetros</h3>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Producto</label>
+            <select id="id_product" required onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                <option value="">— Seleccionar producto —</option>
+                {% for p in products %}
+                <option value="{{ p.id }}" data-min="{{ p.min_persons|default:1 }}" data-max="{{ p.max_persons|default:1000 }}">
+                    {{ p.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Cliente</label>
+            <select id="id_client" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;" onchange="toggleNewClient()">
+                <option value="">— Seleccionar cliente —</option>
+                {% for c in clients %}
+                <option value="{{ c.id }}">{{ c.name }} — {{ c.email }}</option>
+                {% endfor %}
+                <option value="__new__">➕ Nuevo cliente...</option>
+            </select>
+        </div>
+
+        <div id="newClientFields" style="display:none;background:#faf8f3;border-radius:8px;padding:15px;margin-bottom:16px;">
+            <div class="grid-2" style="margin-bottom:12px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.85em;color:#555;">Nombre</label>
+                    <input type="text" id="new_client_name" placeholder="Nombre completo" style="width:100%;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.85em;color:#555;">Email</label>
+                    <input type="email" id="new_client_email" placeholder="correo@ejemplo.com" style="width:100%;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.85em;color:#555;">Teléfono</label>
+                <input type="text" id="new_client_phone" placeholder="+52 555 123 4567" style="width:100%;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas</label>
+            <input type="number" id="id_persons" value="1" min="1" max="1000" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            <small id="persons_hint" style="color:#999;font-size:0.85em;"></small>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nivel de Complejidad</label>
+            <select id="id_complexity_tier" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                <option value="">— Predeterminado del producto —</option>
+                {% for t in tiers %}
+                <option value="{{ t.id }}">{{ t.name }} (+{{ t.surcharge_percentage }}%)</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Notas de diseño</label>
+            <textarea id="id_design_notes" placeholder="Decoración, colores, mensaje personalizado..." style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;"></textarea>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Costo de envío</label>
+                <input type="number" id="id_delivery_cost" value="0" step="0.01" min="0" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Vence</label>
+                <input type="date" id="id_due_date" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="card">
+            <h3 style="margin-bottom:20px;">💰 Desglose de Precio</h3>
+            <div class="price-display" id="priceDisplay">
+                <div class="empty-state">
+                    <h3>Selecciona un producto</h3>
+                    <p>Los precios se actualizarán automáticamente.</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-success" style="width:100%;padding:14px;font-size:1.05em;margin-top:10px;" onclick="createQuote()" id="btnCreate">
+            💾 Crear Cotización
+        </button>
+    </div>
+</div>
+
+<script>
+    function toggleNewClient() {
+        const val = document.getElementById('id_client').value;
+        document.getElementById('newClientFields').style.display = val === '__new__' ? 'block' : 'none';
+    }
+
+    function updatePrice() {
+        const productId = document.getElementById('id_product').value;
+        const persons = parseInt(document.getElementById('id_persons').value) || 1;
+        const tierId = document.getElementById('id_complexity_tier').value;
+        const deliveryCost = parseFloat(document.getElementById('id_delivery_cost').value) || 0;
+        const display = document.getElementById('priceDisplay');
+
+        if (!productId) {
+            display.innerHTML = `<div class="empty-state"><h3>Selecciona un producto</h3><p>Los precios se actualizarán automáticamente.</p></div>`;
+            return;
+        }
+
+        const sel = document.getElementById('id_product');
+        const opt = sel.options[sel.selectedIndex];
+        const min = parseInt(opt.dataset.min) || 1;
+        const max = parseInt(opt.dataset.max) || 1000;
+        document.getElementById('persons_hint').textContent = `Mín: ${min} · Máx: ${max}`;
+
+        const url = `/api/calcular-precio/?product=${productId}&persons=${persons}${tierId ? '&complexity_tier=' + tierId : ''}`;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { display.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${data.error}</p></div>`; return; }
+                const total = parseFloat(data.total);
+                const grandTotal = total + deliveryCost;
+                display.innerHTML = `
+                    <div class="price-row"><span>🧾 Ingredientes</span><span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span></div>
+                    <div class="price-row"><span>👨‍🍳 Mano de obra</span><span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span></div>
+                    <div class="price-row"><span>🎨 Recargo por diseño</span><span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span></div>
+                    <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.price_per_person).toFixed(2)}</span></div>
+                    <div class="price-row total"><span>📦 Subtotal (${persons} pers.)</span><span class="value">$${total.toFixed(2)}</span></div>
+                    ${deliveryCost > 0 ? `<div class="price-row"><span>🚚 Envío</span><span class="value">+$${deliveryCost.toFixed(2)}</span></div>
+                    <div class="price-row total"><span>🏆 Gran Total</span><span class="value">$${grandTotal.toFixed(2)}</span></div>` : ''}
+                `;
+            })
+            .catch(err => { display.innerHTML = `<div class="empty-state"><h3>Error de conexión</h3><p>${err}</p></div>`; });
+    }
+
+    function getCookie(name) {
+        let c = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return c ? c[2] : null;
+    }
+
+    function createQuote() {
+        const productId = document.getElementById('id_product').value;
+        const clientVal = document.getElementById('id_client').value;
+        const persons = document.getElementById('id_persons').value;
+        const tierId = document.getElementById('id_complexity_tier').value;
+        const designNotes = document.getElementById('id_design_notes').value;
+        const deliveryCost = document.getElementById('id_delivery_cost').value;
+        const dueDate = document.getElementById('id_due_date').value;
+        const btn = document.getElementById('btnCreate');
+
+        if (!productId) { alert('Selecciona un producto.'); return; }
+        if (!clientVal) { alert('Selecciona o crea un cliente.'); return; }
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Creando...';
+
+        let clientId = clientVal;
+
+        function doCreate(cid) {
+            const data = new URLSearchParams();
+            data.append('product', productId);
+            data.append('client', cid);
+            data.append('persons', persons);
+            if (tierId) data.append('complexity_tier', tierId);
+            data.append('design_notes', designNotes);
+            data.append('delivery_cost', deliveryCost);
+            data.append('due_date', dueDate);
+
+            fetch('{% url "quote_maker" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+                body: data
+            })
+            .then(r => r.json())
+            .then(resp => {
+                if (resp.error) { alert(resp.error); btn.disabled = false; btn.textContent = '💾 Crear Cotización'; }
+                else {
+                    window.location.href = '{% url "quotes_list" %}';
+                }
+            })
+            .catch(() => { alert('Error de conexión.'); btn.disabled = false; btn.textContent = '💾 Crear Cotización'; });
+        }
+
+        if (clientVal === '__new__') {
+            const name = document.getElementById('new_client_name').value.trim();
+            const email = document.getElementById('new_client_email').value.trim();
+            const phone = document.getElementById('new_client_phone').value.trim();
+            if (!name || !email) { alert('Nombre y email son obligatorios para nuevo cliente.'); btn.disabled = false; btn.textContent = '💾 Crear Cotización'; return; }
+
+            fetch('{% url "client_create" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone })
+            })
+            .then(r => r.json())
+            .then(resp => {
+                if (resp.error) { alert(resp.error); btn.disabled = false; btn.textContent = '💾 Crear Cotización'; }
+                else doCreate(resp.id);
+            })
+            .catch(() => { alert('Error al crear cliente.'); btn.disabled = false; btn.textContent = '💾 Crear Cotización'; });
+        } else {
+            doCreate(clientVal);
+        }
+    }
+</script>
+{% endblock %}

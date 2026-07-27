@@ -1,0 +1,40 @@
+{% extends 'control/base.html' %}
+{% block title %}Compras - Pastelería Yaz{% endblock %}
+{% block page_title %}📥 Compras{% endblock %}
+{% block header_actions %}
+<a href="{% url 'purchase_create' %}" class="btn btn-primary">+ Nueva</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="filters">
+        <a href="{% url 'purchase_list' %}" class="filter-btn {% if not status_filter %}active{% endif %}">Todos</a>
+        {% for v, l in status_choices %}
+        <a href="?status={{ v }}" class="filter-btn {% if status_filter == v %}active{% endif %}">{{ l }}</a>
+        {% endfor %}
+    </div>
+
+    {% if purchases %}
+    <table>
+        <thead><tr><th>#</th><th>Proveedor</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+            {% for p in purchases %}
+            <tr>
+                <td>{{ p.id }}</td>
+                <td><strong>{{ p.provider.name }}</strong></td>
+                <td>{{ p.purchase_date|date:"d/m/Y" }}</td>
+                <td class="amount">${{ p.total_cost|floatformat:2 }}</td>
+                <td><span class="badge-{{ p.status }}">{{ p.get_status_display }}</span></td>
+                <td class="actions">
+                    <a href="{% url 'purchase_edit' p.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'purchase_delete' p.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar compra #{{ p.id }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">📥</div><h3>No hay compras</h3></div>
+    {% endif %}
+</div>
+{% endblock %}

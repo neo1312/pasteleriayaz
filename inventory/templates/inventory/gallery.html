@@ -27,17 +27,61 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
+        header .header-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
         header h1 {
             font-size: 2.5em;
             font-weight: 300;
             letter-spacing: 2px;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         header p {
             font-size: 1.1em;
             font-weight: 300;
             opacity: 0.95;
+        }
+
+        header nav a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        header nav a:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: white;
+        }
+
+        .btn-whatsapp {
+            display: inline-block;
+            background: #d4a373;
+            color: white !important;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95em;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none !important;
+        }
+
+        .btn-whatsapp:hover {
+            background: #c99963 !important;
+            transform: scale(1.05);
         }
 
         .container {
@@ -218,6 +262,32 @@
             }
         }
 
+        /* Modal */
+        .modal-overlay {
+            display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+            z-index:1000; align-items:center; justify-content:center;
+        }
+        .modal-overlay.show { display:flex; }
+        .modal {
+            background:white; border-radius:12px; padding:30px; max-width:500px;
+            width:90%; max-height:90vh; overflow-y:auto; animation:fadeIn 0.3s ease-out;
+        }
+        .modal h2 { margin-bottom:20px; color:#3d2817; }
+        .modal .close-btn {
+            float:right; background:none; border:none; font-size:1.5em;
+            cursor:pointer; color:#999; padding:0 4px;
+        }
+        .modal .close-btn:hover { color:#333; }
+        .modal .form-group { margin-bottom:14px; }
+        .modal .form-group label {
+            display:block; font-weight:600; margin-bottom:5px; font-size:0.85em; color:#555;
+        }
+        .modal .form-group input, .modal .form-group select, .modal .form-group textarea {
+            width:100%; padding:10px 12px; border:2px solid #e8d4c0;
+            border-radius:8px; font-size:0.95em; outline:none;
+        }
+        .modal .form-group textarea { resize:vertical; min-height:60px; }
+
         @media (max-width: 768px) {
             header h1 {
                 font-size: 1.8em;
@@ -243,8 +313,28 @@
 </head>
 <body>
     <header>
-        <h1>🥐 Pastelería Yaz</h1>
-        <p>Delicatessen Artesanales</p>
+        <div class="header-inner">
+            <div>
+                <h1>🥐 Pastelería Yaz</h1>
+                <p>Delicatessen Artesanales</p>
+                <p style="font-size:0.85em;margin-top:6px;opacity:0.9;">
+                    📞 <a href="tel:4411234567" style="color:white;text-decoration:underline;">441-123-4567</a>
+                    &nbsp;|&nbsp;
+                    <a href="https://wa.me/524411234567" target="_blank" style="color:white;text-decoration:underline;">📱 WhatsApp</a>
+                </p>
+            </div>
+            <nav>
+                <a href="https://wa.me/524411234567" target="_blank" class="btn-whatsapp">📱 WhatsApp</a>
+                <a href="#" onclick="openQuoteModal();return false;" style="background:rgba(255,255,255,0.2);border-color:white;font-weight:700;">📝 Cotización</a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'client_portal' %}" style="margin-right: 8px;">Mi Cuenta</a>
+                <a href="{% url 'control_dashboard' %}">Panel</a>
+                {% else %}
+                <a href="{% url 'login' %}" style="margin-right: 8px;">Ingresar</a>
+                <a href="{% url 'register' %}">Registro</a>
+                {% endif %}
+            </nav>
+        </div>
     </header>
 
     <div class="container">
@@ -287,8 +377,75 @@
         {% endif %}
     </div>
 
+    <!-- Quote Modal -->
+    <div class="modal-overlay" id="quoteModal">
+        <div class="modal">
+            <button class="close-btn" onclick="closeQuoteModal()">✕</button>
+            <h2>📝 Solicitar Cotización</h2>
+            <form method="post" action="{% url 'submit_inquiry' 0 %}" id="quoteForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Producto</label>
+                    <select name="product" id="modalProduct" required>
+                        <option value="">— Seleccionar —</option>
+                        {% for p in products %}
+                        <option value="{{ p.id }}">{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if not user.is_authenticated %}
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="name" required placeholder="Tu nombre">
+                </div>
+                <div class="form-group">
+                    <label>Correo electrónico</label>
+                    <input type="email" name="email" required placeholder="tu@correo.com">
+                </div>
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" name="phone" placeholder="441-123-4567">
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label>¿Para cuántas personas?</label>
+                    <input type="number" name="persons" required min="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label>Notas de diseño o preferencias</label>
+                    <textarea name="design_notes" placeholder="Ej: decoración con flores, color rosa, mensaje personalizado..."></textarea>
+                </div>
+                <button type="submit" style="width:100%;padding:14px;background:#d4a373;color:white;border:none;border-radius:8px;font-size:1em;font-weight:700;cursor:pointer;">Enviar Solicitud</button>
+            </form>
+        </div>
+    </div>
+
     <footer>
-        <p>✨ Hecho con amor e ingredientes frescos ✨</p>
+        <p style="font-size:1.1em;margin-bottom:8px;">✨ Hecho con amor e ingredientes frescos ✨</p>
+        <p style="opacity:0.8;">📍 Centro, Querétaro &nbsp;|&nbsp; 📞 <a href="tel:4411234567" style="color:white;text-decoration:underline;">441-123-4567</a></p>
+        <p style="opacity:0.8;">📱 <a href="https://wa.me/524411234567" target="_blank" style="color:white;text-decoration:underline;">WhatsApp</a> &nbsp;|&nbsp; 📧 <a href="mailto:contacto@pasteleriayaz.com" style="color:white;text-decoration:underline;">contacto@pasteleriayaz.com</a></p>
+        {% if not user.is_authenticated %}
+        <p style="margin-top:10px;"><a href="{% url 'register' %}" style="color:white;text-decoration:underline;font-weight:600;">Crea una cuenta</a> para solicitar cotizaciones y dar seguimiento a tus pedidos.</p>
+        {% endif %}
     </footer>
+
+    <script>
+    function openQuoteModal() {
+        document.getElementById('quoteModal').classList.add('show');
+    }
+    function closeQuoteModal() {
+        document.getElementById('quoteModal').classList.remove('show');
+    }
+    document.getElementById('quoteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeQuoteModal();
+    });
+    document.getElementById('quoteForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var productId = document.getElementById('modalProduct').value;
+        if (!productId) { alert('Selecciona un producto'); return; }
+        this.action = "{% url 'submit_inquiry' 0 %}".replace('/0/', '/' + productId + '/');
+        this.submit();
+    });
+    </script>
 </body>
 </html>

@@ -2,10 +2,11 @@ from django.contrib import admin
 from django.urls import reverse, path
 from django.utils.html import format_html
 from django.contrib import messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django import forms
 from django.shortcuts import render
-from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog
+from django.utils.formats import number_format
+from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone
 
 
 class IngredientInline(admin.TabularInline):
@@ -19,7 +20,7 @@ class IngredientInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'cost', 'price', 'margin_percentage', 'quantity_in_stock', 'is_available')
-    list_filter = ('category', 'is_available', 'created_at')
+    list_filter = ('category', 'complexity_tier', 'is_available', 'created_at')
     search_fields = ('name', 'description')
     readonly_fields = ('cost',)
     inlines = [IngredientInline]
@@ -31,6 +32,9 @@ class ProductAdmin(admin.ModelAdmin):
                 'el otro valor y el Costo se calculan automáticamente desde los ingredientes.'
             ),
             'fields': ('cost', 'pricing_mode', 'price', 'margin_percentage'),
+        }),
+        ('Raciones', {
+            'fields': ('complexity_tier', 'base_labor_per_portion', 'min_persons', 'max_persons'),
         }),
         ('Stock', {'fields': ('quantity_in_stock', 'reorder_level')}),
         ('Estado', {'fields': ('is_available',)}),
@@ -80,11 +84,12 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'phone', 'created_at')
+    list_display = ('name', 'email', 'phone', 'user', 'created_at')
     list_filter = ('created_at',)
-    search_fields = ('name', 'email', 'phone')
+    search_fields = ('name', 'email', 'phone', 'user__username')
     fieldsets = (
         ('Información del Cliente', {'fields': ('name', 'email', 'phone')}),
+        ('Usuario', {'fields': ('user',)}),
     )
 
 
@@ -95,10 +100,10 @@ class OrderAdminForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        product  = cleaned.get('product')
-        quantity = cleaned.get('quantity')
-        if product and quantity:
-            shortages = product.check_stock_for(quantity)
+        product = cleaned.get('product')
+        persons = cleaned.get('persons')
+        if product and persons:
+            shortages = product.check_stock_for(persons)
             if shortages:
                 lines = [
                     f"• {s['name']}: necesitas {s['needed']:.2f} {s['unit']}, "
@@ -107,52 +112,24 @@ class OrderAdminForm(forms.ModelForm):
                     for s in shortages
                 ]
                 raise forms.ValidationError(
-                    "⚠️ No hay suficientes materias primas para producir este pedido:\n" +
+                    "⚠️ No hay suficientes materias primas para este pedido:\n" +
                     "\n".join(lines)
                 )
         return cleaned
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        from decimal import Decimal
-        
-        # Auto-populate unit_price from product price if not already set
-        if instance.product and (not instance.unit_price or instance.unit_price == 0):
-            instance.unit_price = instance.product.price
-        
-        # Auto-calculate total_price from unit_price and quantity
-        if instance.unit_price and instance.quantity:
-            instance.total_price = (instance.unit_price * Decimal(str(instance.quantity))).quantize(Decimal('0.000001'))
-        
-        if commit:
-            instance.save()
-        return instance
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     form = OrderAdminForm
-    list_display = ('id', 'client', 'product', 'quantity', 'unit_price', 'total_price', 'status', 'order_date')
+    list_display = ('id', 'client', 'product', 'persons', 'unit_price', 'total_price', 'status', 'order_date')
     list_filter = ('status', 'order_date', 'client')
     search_fields = ('client__name', 'product__name')
-    readonly_fields = ('order_date', 'unit_price', 'total_price')
+    readonly_fields = ('order_date', 'unit_price', 'design_surcharge', 'labor_cost', 'total_price')
     fieldsets = (
-        ('Detalles del Pedido', {'fields': ('client', 'product', 'quantity', 'unit_price', 'total_price')}),
+        ('Detalles del Pedido', {'fields': ('client', 'product', 'persons', 'unit_price', 'total_price')}),
+        ('Personalización', {'fields': ('design_notes', 'design_surcharge', 'labor_cost')}),
         ('Estado', {'fields': ('status', 'notes')}),
     )
-
-    def save_model(self, request, obj, form, change):
-        from decimal import Decimal
-        
-        # Auto-populate unit_price from product price if not set
-        if obj.product and (not obj.unit_price or obj.unit_price == 0):
-            obj.unit_price = obj.product.price
-        
-        # Auto-calculate total_price
-        if obj.unit_price and obj.quantity:
-            obj.total_price = (obj.unit_price * Decimal(str(obj.quantity))).quantize(Decimal('0.000001'))
-        
-        super().save_model(request, obj, form, change)
 
 
 @admin.register(Provider)
@@ -161,8 +138,8 @@ class ProviderAdmin(admin.ModelAdmin):
     list_filter = ('city', 'created_at')
     search_fields = ('name', 'contact_person', 'email')
     fieldsets = (
-        ('Company Info', {'fields': ('name', 'contact_person', 'email', 'phone')}),
-        ('Address', {'fields': ('address', 'city', 'postal_code')}),
+        ('Información de la Empresa', {'fields': ('name', 'contact_person', 'email', 'phone')}),
+        ('Dirección', {'fields': ('address', 'city', 'postal_code')}),
     )
 
 
@@ -172,8 +149,8 @@ class ProviderCatalogInline(admin.TabularInline):
     extra = 1
     fields = ('provider', 'unit_price', 'notes', 'updated_at')
     readonly_fields = ('updated_at',)
-    verbose_name = "Provider Price"
-    verbose_name_plural = "Provider Prices (sorted cheapest first)"
+    verbose_name = "Precio de Proveedor"
+    verbose_name_plural = "Precios de Proveedores (ordenado más barato primero)"
     ordering = ('unit_price',)
 
 
@@ -185,57 +162,10 @@ class RawProductAdmin(admin.ModelAdmin):
     readonly_fields = ('average_cost',)
     inlines = [ProviderCatalogInline]
     fieldsets = (
-        ('Basic Info', {'fields': ('name', 'brand', 'description', 'provider')}),
-        ('Units & Cost', {'fields': ('unit', 'cost_per_unit', 'average_cost')}),
+        ('Información Básica', {'fields': ('name', 'brand', 'description', 'provider')}),
+        ('Unidades y Costo', {'fields': ('unit', 'cost_per_unit', 'average_cost')}),
         ('Stock', {'fields': ('quantity_in_stock', 'reorder_level')}),
     )
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom = [
-            path(
-                'price-compare/',
-                self.admin_site.admin_view(self.price_compare_view),
-                name='rawproduct_price_compare',
-            ),
-        ]
-        return custom + urls
-
-    def price_compare_view(self, request):
-        raw_products = RawProduct.objects.order_by('name', 'brand')
-        selected_id  = request.GET.get('raw_product')
-        entries      = []
-        selected_rp  = None
-
-        if selected_id:
-            try:
-                selected_rp = RawProduct.objects.get(pk=selected_id)
-                qs = (
-                    ProviderCatalog.objects
-                    .filter(raw_product=selected_rp)
-                    .select_related('provider')
-                    .order_by('unit_price')
-                )
-                # Annotate each entry with the difference vs cheapest
-                entries_list = list(qs)
-                if entries_list:
-                    cheapest = entries_list[0].unit_price
-                    for e in entries_list:
-                        e.diff_from_cheapest = e.unit_price - cheapest
-                entries = entries_list
-            except RawProduct.DoesNotExist:
-                pass
-
-        context = {
-            **self.admin_site.each_context(request),
-            'title': 'Price Compare by Provider',
-            'raw_products': raw_products,
-            'selected_id': int(selected_id) if selected_id else None,
-            'selected_rp': selected_rp,
-            'entries': entries,
-            'opts': RawProduct._meta,
-        }
-        return render(request, 'admin/inventory/rawproduct/price_compare.html', context)
 
 
 class PurchaseItemInline(admin.TabularInline):
@@ -252,14 +182,14 @@ class PurchaseAdmin(admin.ModelAdmin):
     search_fields = ('provider__name', 'notes')
     inlines = [PurchaseItemInline]
     fieldsets = (
-        ('Purchase Info', {'fields': ('provider', 'delivery_date', 'status')}),
-        ('Notes', {'fields': ('notes',)}),
+        ('Información de Compra', {'fields': ('provider', 'delivery_date', 'status')}),
+        ('Notas', {'fields': ('notes',)}),
     )
     readonly_fields = ('purchase_date', 'get_total_cost')
 
     def get_total_cost(self, obj):
-        return f"${obj.total_cost:.2f}"
-    get_total_cost.short_description = 'Total Cost'
+        return f"${number_format(obj.total_cost, 2)}"
+    get_total_cost.short_description = 'Costo Total'
 
 
 @admin.register(Quote)
@@ -267,27 +197,33 @@ class QuoteAdmin(admin.ModelAdmin):
     change_form_template = 'admin/inventory/quote/change_form.html'
 
     list_display = (
-        'id', 'client', 'product', 'quantity', 'unit_price',
+        'id', 'client', 'product', 'persons', 'unit_price',
         'show_total_price', 'show_delivery_cost', 'show_grand_total',
         'due_date', 'show_days_until_due', 'status',
     )
     list_filter  = ('status', 'due_date', 'client')
     search_fields = ('client__name', 'product__name', 'notes')
-    readonly_fields = ('unit_price', 'show_total_price', 'show_grand_total', 'show_days_until_due')
+    readonly_fields = ('unit_price', 'design_surcharge', 'labor_cost', 'show_total_price', 'show_grand_total', 'show_days_until_due')
     fieldsets = (
-        ('Quote Details', {
-            'fields': ('client', 'product', 'quantity', 'unit_price', 'delivery_cost'),
+        ('Detalles de Cotización', {
+            'fields': ('client', 'product', 'persons', 'design_notes'),
         }),
-        ('Totals (auto)', {
+        ('Costos', {
+            'fields': ('unit_price', 'design_surcharge', 'labor_cost', 'delivery_cost'),
+        }),
+        ('Totales (auto)', {
             'fields': ('show_total_price', 'show_grand_total'),
         }),
-        ('Schedule', {
+        ('Programación', {
             'fields': ('due_date', 'show_days_until_due'),
         }),
-        ('Status & Notes', {
+        ('Estado y Notas', {
             'fields': ('status', 'notes'),
         }),
     )
+
+    class Media:
+        js = ('admin/js/quote_autofill.js',)
 
     # ── custom URLs ──────────────────────────────────────────────────────────
 
@@ -299,24 +235,44 @@ class QuoteAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.convert_to_order_view),
                 name='quote_convert_to_order',
             ),
+            path(
+                'product-price/<int:product_id>/',
+                self.admin_site.admin_view(self.product_price_view),
+                name='quote_product_price',
+            ),
         ]
         return custom + urls
+
+    def product_price_view(self, request, product_id):
+        try:
+            product = Product.objects.get(pk=product_id)
+            breakdown = product.calculate_price_for(1)
+            return JsonResponse({
+                'price_per_person': str(breakdown['price_per_person']),
+                'ingredient_cost': str(breakdown['ingredient_cost']),
+                'labor_cost': str(breakdown['labor_cost']),
+                'base_total': str(breakdown['base_total']),
+                'design_surcharge': str(breakdown['design_surcharge']),
+                'total': str(breakdown['total']),
+            })
+        except Product.DoesNotExist:
+            return JsonResponse({'price': '0'}, status=404)
 
     def convert_to_order_view(self, request, pk):
         quote = Quote.objects.select_related('client', 'product').get(pk=pk)
 
-        shortages = quote.product.check_stock_for(quote.quantity)
+        shortages = quote.product.check_stock_for(quote.persons)
         if shortages:
             lines = [
-                f"• {s['name']}: need {s['needed']:.2f} {s['unit']}, "
-                f"available {s['available']:.2f} {s['unit']} "
-                f"(short by {s['shortage']:.2f} {s['unit']})"
+                f"• {s['name']}: necesita {s['needed']:.2f} {s['unit']}, "
+                f"disponible {s['available']:.2f} {s['unit']} "
+                f"(falta {s['shortage']:.2f} {s['unit']})"
                 for s in shortages
             ]
             messages.error(
                 request,
                 format_html(
-                    "⚠️ Cannot convert: not enough raw materials.<br>{}",
+                    "⚠️ No se puede convertir: no hay suficientes materias primas.<br>{}",
                     format_html("<br>".join(lines)),
                 ),
             )
@@ -324,20 +280,25 @@ class QuoteAdmin(admin.ModelAdmin):
                 reverse('admin:inventory_quote_change', args=[pk])
             )
 
+        quote.recalculate()
+
         # Create the order
         order = Order.objects.create(
             client=quote.client,
             product=quote.product,
-            quantity=quote.quantity,
+            persons=quote.persons,
             unit_price=quote.unit_price,
+            design_notes=quote.design_notes,
+            design_surcharge=quote.design_surcharge,
+            labor_cost=quote.labor_cost,
             total_price=quote.total_price,
             status='pending',
-            notes=f"Converted from Quote #{quote.pk}. {quote.notes or ''}".strip(),
+            notes=f"Convertido de Cotización #{quote.pk}. {quote.notes or ''}".strip(),
         )
         quote.status = 'approved'
         quote.save(update_fields=['status'])
 
-        messages.success(request, f"✅ Quote #{pk} converted to Order #{order.pk}.")
+        messages.success(request, f"✅ Cotización #{pk} convertida a Pedido #{order.pk}.")
         return HttpResponseRedirect(
             reverse('admin:inventory_order_change', args=[order.pk])
         )
@@ -345,24 +306,22 @@ class QuoteAdmin(admin.ModelAdmin):
     # ── save logic ───────────────────────────────────────────────────────────
 
     def save_model(self, request, obj, form, change):
-        # Auto-fill unit_price from product price when not set
-        if (not obj.unit_price or obj.unit_price == 0) and obj.product_id:
-            obj.unit_price = obj.product.price
+        obj.recalculate()
         super().save_model(request, obj, form, change)
 
     # ── display helpers ──────────────────────────────────────────────────────
 
     def show_total_price(self, obj):
-        return f"${obj.total_price:.2f}" if obj.pk else "—"
-    show_total_price.short_description = "Total Price"
+        return f"${number_format(obj.total_price, 2)}" if obj.pk else "—"
+    show_total_price.short_description = "Precio Total"
 
     def show_delivery_cost(self, obj):
-        return f"${obj.delivery_cost:.2f}"
-    show_delivery_cost.short_description = "Delivery"
+        return f"${number_format(obj.delivery_cost, 2)}"
+    show_delivery_cost.short_description = "Envío"
 
     def show_grand_total(self, obj):
-        return f"${obj.grand_total:.2f}" if obj.pk else "—"
-    show_grand_total.short_description = "Grand Total"
+        return f"${number_format(obj.grand_total, 2)}" if obj.pk else "—"
+    show_grand_total.short_description = "Gran Total"
 
     def show_days_until_due(self, obj):
         if not obj.pk or not obj.due_date:
@@ -370,18 +329,18 @@ class QuoteAdmin(admin.ModelAdmin):
         days = obj.days_until_due
         if days < 0:
             return format_html(
-                '<span style="color:#c00;font-weight:bold;">Overdue by {} day{}</span>',
+                '<span style="color:#c00;font-weight:bold;">Vencido hace {} día{}</span>',
                 abs(days), "s" if abs(days) != 1 else "",
             )
         if days == 0:
-            return format_html('<span style="color:#c00;font-weight:bold;">Due today!</span>')
+            return format_html('<span style="color:#c00;font-weight:bold;">¡Vence hoy!</span>')
         if days <= 3:
             return format_html(
-                '<span style="color:#e65c00;font-weight:bold;">{} day{}</span>',
+                '<span style="color:#e65c00;font-weight:bold;">{} día{}</span>',
                 days, "s" if days != 1 else "",
             )
-        return format_html('<span style="color:#080;">{} days</span>', days)
-    show_days_until_due.short_description = "Days Until Due"
+        return format_html('<span style="color:#080;">{} días</span>', days)
+    show_days_until_due.short_description = "Días hasta Vencimiento"
 
 
 @admin.register(ProviderCatalog)
@@ -393,18 +352,15 @@ class ProviderCatalogAdmin(admin.ModelAdmin):
     ordering = ("raw_product", "unit_price")
 
 
-# Personalizar el sitio admin
-class CustomAdminSite(admin.AdminSite):
-    site_header = "🥐 Pastelería Yaz - Administración"
-    site_title = "Pastelería Yaz"
-    index_title = "Panel de Control"
-    
-    def index(self, request, extra_context=None):
-        extra_context = extra_context or {}
-        extra_context['dashboard_url'] = reverse('admin_dashboard')
-        return super().index(request, extra_context)
+@admin.register(ComplexityTier)
+class ComplexityTierAdmin(admin.ModelAdmin):
+    list_display = ("name", "surcharge_percentage")
+    search_fields = ("name",)
 
 
-# Reemplazar el sitio admin por defecto (opcional)
-# admin.site = CustomAdminSite()
+@admin.register(TransportZone)
+class TransportZoneAdmin(admin.ModelAdmin):
+    list_display = ("name", "radius_km", "base_fee", "fee_per_km")
+    search_fields = ("name",)
+
 

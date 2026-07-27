@@ -1,16 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ product.name }} - Pastelería Yaz</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%);
@@ -18,226 +13,158 @@
             line-height: 1.6;
             min-height: 100vh;
         }
-
         header {
             background: linear-gradient(135deg, #d4a373 0%, #c99963 100%);
             color: white;
             padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
-        header a {
-            color: white;
-            text-decoration: none;
-            font-size: 1.2em;
-            float: left;
-            font-weight: 600;
+        header .header-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
         }
-
-        header h1 {
-            font-size: 1.8em;
+        header h1 { font-size: 1.5em; }
+        header nav a {
+            color: white; text-decoration: none; padding: 8px 16px;
+            border: 2px solid rgba(255,255,255,0.4); border-radius: 6px;
+            font-size: 0.9em; transition: all 0.3s;
         }
-
+        header nav a:hover { background: rgba(255,255,255,0.15); border-color: white; }
+        .btn-whatsapp {
+            display: inline-block; background: #d4a373; color: white !important;
+            padding: 10px 20px; border-radius: 8px; font-weight: 700;
+            font-size: 0.95em; text-decoration: none; transition: all 0.3s ease;
+            border: none !important;
+        }
+        .btn-whatsapp:hover { background: #c99963 !important; transform: scale(1.05); }
         .container {
-            max-width: 900px;
-            margin: 40px auto;
+            max-width: 1000px;
+            margin: 30px auto;
             padding: 0 20px;
         }
-
+        .back-btn {
+            display: inline-block; margin-bottom: 20px; padding: 10px 20px;
+            background: #d4a373; color: white; text-decoration: none;
+            border-radius: 8px; transition: all 0.3s; font-weight: 600;
+        }
+        .back-btn:hover { background: #c99963; transform: translateX(-5px); }
         .product-detail {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            padding: 40px;
+            background: white; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.1);
+            display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 30px;
             animation: fadeIn 0.5s ease-out;
         }
-
-        .product-image-section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
+        .product-image-section { display: flex; align-items: center; justify-content: center; }
         .product-image {
-            width: 100%;
-            height: 400px;
+            width: 100%; height: 350px;
             background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c0 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 150px;
-            border-radius: 12px;
-            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 120px; border-radius: 12px; overflow: hidden;
         }
-
-        .product-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .product-image.no-image {
-            font-size: 120px;
-            opacity: 0.7;
-        }
-
-        .product-info-section h2 {
-            font-size: 2.2em;
-            color: #3d2817;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
+        .product-image img { width: 100%; height: 100%; object-fit: cover; }
+        .product-image.no-image { font-size: 100px; opacity: 0.7; }
+        .product-info-section h2 { font-size: 2em; color: #3d2817; margin-bottom: 10px; }
         .product-category {
-            display: inline-block;
-            background: #fae8d6;
-            color: #8b6914;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            display: inline-block; background: #fae8d6; color: #8b6914;
+            padding: 6px 14px; border-radius: 20px; font-size: 0.85em;
+            font-weight: 600; margin-bottom: 15px; text-transform: uppercase;
         }
+        .product-description { font-size: 1em; color: #555; line-height: 1.8; margin-bottom: 20px; }
 
-        .product-price {
-            font-size: 2.5em;
-            color: #d4a373;
-            font-weight: 700;
-            margin-bottom: 20px;
+        /* Price breakdown */
+        .price-breakdown {
+            background: #faf8f3; border-radius: 8px; padding: 20px; margin-bottom: 20px;
         }
-
-        .product-description {
-            font-size: 1em;
-            color: #555;
-            line-height: 1.8;
-            margin-bottom: 30px;
+        .price-breakdown h3 { font-size: 1em; color: #3d2817; margin-bottom: 12px; }
+        .price-row {
+            display: flex; justify-content: space-between; padding: 6px 0;
+            font-size: 0.9em; color: #555;
         }
-
-        .product-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding: 20px 0;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
+        .price-row.total {
+            border-top: 2px solid #d4a373; margin-top: 6px; padding-top: 10px;
+            font-weight: 700; color: #3d2817; font-size: 1.1em;
         }
+        .price-row.discount { color: #155724; }
 
-        .stat {
-            text-align: center;
+        /* Inquiry form */
+        .inquiry-section {
+            margin-top: 30px; padding: 25px; background: #faf8f3;
+            border-radius: 12px; border: 2px solid #e8d4c0;
         }
-
-        .stat-label {
-            font-size: 0.85em;
-            color: #999;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
+        .inquiry-section h3 { font-size: 1.3em; margin-bottom: 15px; color: #3d2817; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9em; color: #555; }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 12px 16px; border: 2px solid #e8d4c0;
+            border-radius: 8px; font-size: 1em; transition: border-color 0.3s; outline: none;
         }
-
-        .stat-value {
-            font-size: 1.8em;
-            color: #3d2817;
-            font-weight: 700;
+        .form-group input:focus, .form-group textarea:focus { border-color: #d4a373; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group .help-text { font-size: 0.85em; color: #999; margin-top: 4px; }
+        .btn-primary {
+            padding: 14px 30px; background: #d4a373; color: white; border: none;
+            border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer;
+            transition: background 0.3s; width: 100%;
         }
-
-        .stock-status {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            font-weight: 600;
+        .btn-primary:hover { background: #c99963; }
+        .login-prompt {
+            text-align: center; padding: 20px; color: #666;
         }
-
-        .stock-status.available {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
+        .login-prompt a { color: #d4a373; font-weight: 600; }
+        .messages { margin-bottom: 20px; }
+        .messages .error {
+            background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 8px;
         }
-
-        .stock-status.low {
-            background: #fff3cd;
-            color: #856404;
-            border-left: 4px solid #ffc107;
+        .messages .success {
+            background: #d4edda; color: #155724; padding: 12px; border-radius: 8px; margin-bottom: 8px;
         }
-
-        .stock-status.unavailable {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
-
-        .back-btn {
-            display: inline-block;
-            margin-bottom: 30px;
-            padding: 10px 20px;
-            background: #d4a373;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            font-weight: 600;
-        }
-
-        .back-btn:hover {
-            background: #c99963;
-            transform: translateX(-5px);
-        }
-
         footer {
-            background: #3d2817;
-            color: white;
-            text-align: center;
-            padding: 30px 20px;
-            margin-top: 60px;
+            background: #3d2817; color: white; text-align: center;
+            padding: 30px 20px; margin-top: 60px;
         }
-
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
         @media (max-width: 768px) {
-            .product-detail {
-                grid-template-columns: 1fr;
-                gap: 30px;
-                padding: 20px;
-            }
-
-            .product-image {
-                height: 300px;
-                font-size: 100px;
-            }
-
-            .product-info-section h2 {
-                font-size: 1.8em;
-            }
-
-            .product-price {
-                font-size: 2em;
-            }
+            .product-detail { grid-template-columns: 1fr; padding: 20px; }
+            .product-image { height: 250px; font-size: 80px; }
         }
     </style>
 </head>
 <body>
     <header>
-        <a href="{% url 'gallery' %}">← Volver a Galería</a>
-        <h1>🥐 Pastelería Yaz</h1>
+        <div class="header-inner">
+            <div>
+                <h1>🥐 Pastelería Yaz</h1>
+                <p style="font-size:0.8em;opacity:0.9;">
+                    📞 <a href="tel:4411234567" style="color:white;text-decoration:underline;">441-123-4567</a>
+                    &nbsp;|&nbsp;
+                    <a href="https://wa.me/524411234567" target="_blank" style="color:white;text-decoration:underline;">📱 WhatsApp</a>
+                </p>
+            </div>
+            <nav>
+                <a href="https://wa.me/524411234567" target="_blank" class="btn-whatsapp">📱 WhatsApp</a>
+                <a href="{% url 'gallery' %}">Tienda</a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'client_portal' %}">Mi Cuenta</a>
+                {% else %}
+                <a href="{% url 'login' %}">Ingresar</a>
+                <a href="{% url 'register' %}">Registro</a>
+                {% endif %}
+            </nav>
+        </div>
     </header>
 
     <div class="container">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <a href="{% url 'gallery' %}" class="back-btn">← Volver a Galería</a>
 
         <div class="product-detail">
@@ -254,29 +181,90 @@
             <div class="product-info-section">
                 <span class="product-category">{{ product.get_category_display }}</span>
                 <h2>{{ product.name }}</h2>
-                <p style="color: #999; font-size: 0.95em; margin-bottom: 20px;">ID: {{ product.id }}</p>
-                
+
                 <div class="product-description">
-                    {{ product.description }}
+                    {{ product.description|linebreaks }}
                 </div>
 
-                {% if product.ingredients.all %}
-                    <div style="margin-bottom: 30px; padding: 20px; background: #faf8f3; border-radius: 8px;">
-                        <h3 style="color: #3d2817; margin-bottom: 15px; font-size: 1.2em;">📋 Ingredientes Principales</h3>
-                        <ul style="list-style: none; padding: 0;">
-                            {% for ingredient in product.ingredients.all %}
-                                <li style="padding: 8px 0; color: #555; border-bottom: 1px solid #e8d4c0;">
-                                    {{ ingredient.raw_product.name }}
-                                </li>
-                            {% endfor %}
-                        </ul>
+                {% if price_info %}
+                <div class="price-breakdown">
+                    <h3>💰 Precio por persona</h3>
+                    <div class="price-row">
+                        <span>Ingredientes</span>
+                        <span>${{ price_info.ingredient_cost|floatformat:2 }}</span>
                     </div>
+                    <div class="price-row">
+                        <span>Mano de obra</span>
+                        <span>${{ price_info.labor_cost|floatformat:2 }}</span>
+                    </div>
+                    {% if price_info.design_surcharge > 0 %}
+                    <div class="price-row">
+                        <span>Recargo por diseño ({{ product.complexity_tier.surcharge_percentage }}%)</span>
+                        <span>${{ price_info.design_surcharge|floatformat:2 }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="price-row total">
+                        <span>Precio por persona</span>
+                        <span>${{ price_info.price_per_person|floatformat:2 }}</span>
+                    </div>
+                </div>
                 {% endif %}
 
-                <a href="{% url 'gallery' %}" class="back-btn" style="display: block; text-align: center;">Seguir Comprando</a>
+                {% if product.min_persons or product.max_persons %}
+                <p style="font-size: 0.9em; color: #999; margin-bottom: 15px;">
+                    👥 Ración: {% if product.min_persons %}mín. {{ product.min_persons }}{% endif %}
+                    {% if product.min_persons and product.max_persons %} — {% endif %}
+                    {% if product.max_persons %}máx. {{ product.max_persons }}{% endif %} persona(s)
+                </p>
+                {% endif %}
             </div>
         </div>
+
+        <div class="inquiry-section">
+            <h3>📝 Solicitar Cotización</h3>
+            <form method="post" action="{% url 'submit_inquiry' product.id %}">
+                {% csrf_token %}
+                {% if not user.is_authenticated %}
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="name" required placeholder="Tu nombre">
+                </div>
+                <div class="form-group">
+                    <label>Correo electrónico</label>
+                    <input type="email" name="email" required placeholder="tu@correo.com">
+                </div>
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" name="phone" placeholder="441-123-4567">
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label>¿Para cuántas personas?</label>
+                    <input type="number" name="persons" required
+                           min="{{ product.min_persons|default:1 }}"
+                           max="{{ product.max_persons|default:1000 }}"
+                           value="{{ product.min_persons|default:1 }}">
+                    <div class="help-text">
+                        Mínimo: {{ product.min_persons|default:1 }} · Máximo: {{ product.max_persons|default:"Sin límite" }}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notas de diseño o preferencias</label>
+                    <textarea name="design_notes" placeholder="Ej: decoración con flores, color rosa, mensaje personalizado..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Solicitar Cotización</button>
+            </form>
+        </div>
     </div>
+
+    <script>
+        const basePricePerPerson = {{ price_info.price_per_person|default:0 }};
+        function updatePrice(persons) {
+            // Visual feedback only — actual calculation on server
+            const total = (basePricePerPerson * persons).toFixed(2);
+            // could show estimated total here if desired
+        }
+    </script>
 
     <footer>
         <p>✨ Hecho con amor e ingredientes frescos ✨</p>

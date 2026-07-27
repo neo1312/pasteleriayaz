@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Pastelería Yaz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%);
+            color: #3d2817;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #d4a373 0%, #c99963 100%);
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        header .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 300;
+        }
+
+        header nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        header nav a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        header nav a:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #d4a373;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.danger {
+            border-left-color: #dc3545;
+        }
+
+        .stat-card.success {
+            border-left-color: #28a745;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.85em;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 2.2em;
+            color: #d4a373;
+            font-weight: 700;
+        }
+
+        .stat-card.danger .stat-value {
+            color: #dc3545;
+        }
+
+        .stat-card.success .stat-value {
+            color: #28a745;
+        }
+
+        .shortcuts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .shortcut {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            text-decoration: none;
+            color: #3d2817;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .shortcut:hover {
+            transform: translateY(-4px);
+            border-color: #d4a373;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .shortcut .icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .shortcut .name {
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #d4a373 0%, #c99963 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.8em;
+            padding: 4px 12px;
+            border: 1.5px solid rgba(255,255,255,0.5);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .card-header a:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: white;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .low-stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .low-stock-item:last-child {
+            border-bottom: none;
+        }
+
+        .low-stock-item .name {
+            font-weight: 600;
+            color: #3d2817;
+        }
+
+        .low-stock-item .qty {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .low-stock-empty {
+            text-align: center;
+            padding: 30px;
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .orders-table th {
+            text-align: left;
+            padding: 10px;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: #999;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .orders-table td {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .orders-table tbody tr:hover {
+            background: #faf8f3;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-badge.pending, .status-badge.draft {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.completed, .status-badge.accepted {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.cancelled, .status-badge.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-badge.sent {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-badge.expired {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        footer {
+            background: #3d2817;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+        }
+
+        .amount {
+            font-weight: 600;
+            color: #d4a373;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background: #d4a373;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: #c99963;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            header .header-inner {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <h1>🥐 Panel de Control</h1>
+            <nav>
+                <a href="{% url 'gallery' %}">Tienda</a>
+                <a href="{% url 'admin:index' %}">Admin</a>
+                <a href="{% url 'admin:logout' %}">Salir</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Productos</div>
+                <div class="stat-value">{{ total_products }}</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-label">Clientes</div>
+                <div class="stat-value">{{ total_clients }}</div>
+            </div>
+            <div class="stat-card {% if pending_orders > 0 %}danger{% endif %}">
+                <div class="stat-label">Pedidos Pendientes</div>
+                <div class="stat-value">{{ pending_orders }}</div>
+            </div>
+            <div class="stat-card {% if pending_quotes > 0 %}danger{% endif %}">
+                <div class="stat-label">Cotizaciones Pendientes</div>
+                <div class="stat-value">{{ pending_quotes }}</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-label">Ventas (7 días)</div>
+                <div class="stat-value">${{ week_sales_total|floatformat:2 }}</div>
+            </div>
+        </div>
+
+        <div class="shortcuts">
+            <a class="shortcut" href="{% url 'quotes_list' %}">
+                <div class="icon">📄</div>
+                <div class="name">Cotizaciones</div>
+            </a>
+            <a class="shortcut" href="{% url 'product_list' %}">
+                <div class="icon">🧁</div>
+                <div class="name">Productos</div>
+            </a>
+            <a class="shortcut" href="{% url 'order_list' %}">
+                <div class="icon">📦</div>
+                <div class="name">Pedidos</div>
+            </a>
+            <a class="shortcut" href="{% url 'client_list' %}">
+                <div class="icon">👥</div>
+                <div class="name">Clientes</div>
+            </a>
+            <a class="shortcut" href="{% url 'rawproduct_list' %}">
+                <div class="icon">🥚</div>
+                <div class="name">Insumos</div>
+            </a>
+            <a class="shortcut" href="{% url 'purchase_list' %}">
+                <div class="icon">📥</div>
+                <div class="name">Compras</div>
+            </a>
+            <a class="shortcut" href="{% url 'complexity_tier_list' %}">
+                <div class="icon">⚙️</div>
+                <div class="name">Niveles de Complejidad</div>
+            </a>
+            <a class="shortcut" href="{% url 'admin_dashboard' %}">
+                <div class="icon">📊</div>
+                <div class="name">Reportes</div>
+            </a>
+            <a class="shortcut" href="{% url 'price_compare' %}">
+                <div class="icon">🔍</div>
+                <div class="name">Comparar Precios</div>
+            </a>
+        </div>
+
+        <div class="two-column">
+            <div class="card">
+                <div class="card-header">⚠️ Stock Bajo</div>
+                <div class="card-body">
+                    {% if low_stock %}
+                        {% for item in low_stock %}
+                            <div class="low-stock-item">
+                                <span class="name">{{ item.name }}</span>
+                                <span class="qty">{{ item.quantity_in_stock }} / {{ item.reorder_level }} {{ item.unit }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="low-stock-empty">✅ Todos los materiales tienen stock suficiente</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    📋 Pedidos Recientes
+                    <a href="{% url 'admin:inventory_order_changelist' %}">Ver todo</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                        <table class="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Cliente</th>
+                                    <th>Producto</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                    <tr>
+                                        <td>{{ order.id }}</td>
+                                        <td>{{ order.client.name }}</td>
+                                        <td>{{ order.product.name }}</td>
+                                        <td><span class="status-badge {{ order.status }}">{{ order.get_status_display }}</span></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="empty-state">
+                            <p>No hay pedidos registrados.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                📄 Cotizaciones Recientes
+                <a href="{% url 'quotes_list' %}">Ver todo</a>
+            </div>
+            <div class="card-body">
+                {% if recent_quotes %}
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Cliente</th>
+                                <th>Producto</th>
+                                <th>Pers.</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quote in recent_quotes %}
+                                <tr>
+                                    <td>{{ quote.id }}</td>
+                                    <td>{{ quote.client.name }}</td>
+                                    <td>{{ quote.product.name }}</td>
+                                    <td>{{ quote.persons }}</td>
+                                    <td class="amount">${{ quote.grand_total|floatformat:2 }}</td>
+                                    <td><span class="status-badge {{ quote.status }}">{{ quote.get_status_display }}</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No hay cotizaciones registradas.</p>
+                        <p style="margin-top: 15px;"><a class="btn-primary" href="{% url 'admin:inventory_quote_add' %}">Crear primera cotización</a></p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>✨ Sistema de Gestión - Pastelería Yaz ✨</p>
+    </footer>
+</body>
+</html>

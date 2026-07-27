@@ -1,0 +1,33 @@
+{% extends 'control/base.html' %}
+{% block title %}Proveedores - Pastelería Yaz{% endblock %}
+{% block page_title %}🚚 Proveedores{% endblock %}
+{% block header_actions %}
+<a href="{% url 'provider_create' %}" class="btn btn-primary">+ Nuevo</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    {% if providers %}
+    <table>
+        <thead><tr><th>Nombre</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th>Ciudad</th><th>Acciones</th></tr></thead>
+        <tbody>
+            {% for p in providers %}
+            <tr>
+                <td><strong>{{ p.name }}</strong></td>
+                <td>{{ p.contact_person|default:'—' }}</td>
+                <td>{{ p.email }}</td>
+                <td>{{ p.phone|default:'—' }}</td>
+                <td>{{ p.city|default:'—' }}</td>
+                <td class="actions">
+                    <a href="{% url 'provider_edit' p.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'provider_delete' p.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar {{ p.name }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">🚚</div><h3>No hay proveedores</h3></div>
+    {% endif %}
+</div>
+{% endblock %}

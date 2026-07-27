@@ -1,0 +1,63 @@
+{% extends 'control/base.html' %}
+{% block title %}Productos - Pastelería Yaz{% endblock %}
+{% block page_title %}🧁 Productos{% endblock %}
+{% block header_actions %}
+<a href="{% url 'product_create' %}" class="btn btn-primary">+ Nuevo</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="get" class="search-bar" style="margin-bottom:0;">
+        <input type="text" name="search" placeholder="Buscar por nombre..." value="{{ search }}">
+        <select name="category" style="padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;background:white;">
+            <option value="">Todas las categorías</option>
+            {% for v, l in categories %}
+            <option value="{{ v }}" {% if category == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-outline">Buscar</button>
+    </form>
+</div>
+
+<div class="card">
+    {% if products %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Costo</th>
+                <th>Precio</th>
+                <th>Margen</th>
+                <th>Stock</th>
+                <th>Disponible</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td><strong>{{ p.name }}</strong></td>
+                <td><span class="badge" style="background:#fae8d6;color:#8b6914;">{{ p.get_category_display }}</span></td>
+                <td class="amount">${{ p.cost|floatformat:2 }}</td>
+                <td class="amount">${{ p.price|floatformat:2 }}</td>
+                <td class="amount">{{ p.margin_percentage|floatformat:1 }}%</td>
+                <td class="amount">{{ p.quantity_in_stock }}</td>
+                <td>{% if p.is_available %}✅{% else %}❌{% endif %}</td>
+                <td class="actions">
+                    <a href="{% url 'product_edit' p.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'product_delete' p.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar {{ p.name }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">🧁</div>
+        <h3>No hay productos</h3>
+        <p><a href="{% url 'product_create' %}">Crea el primer producto</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

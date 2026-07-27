@@ -1,0 +1,56 @@
+{% extends 'control/base.html' %}
+{% block title %}Cotizaciones - Pastelería Yaz{% endblock %}
+{% block page_title %}📋 Cotizaciones{% endblock %}
+{% block header_actions %}
+<a href="{% url 'quote_maker' %}" class="btn btn-primary">+ Nueva</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="filters">
+        <a href="{% url 'quotes_list' %}" class="filter-btn {% if not status_filter %}active{% endif %}">Todas</a>
+        {% for v, l in status_choices %}
+        <a href="?status={{ v }}" class="filter-btn {% if status_filter == v %}active{% endif %}">{{ l }}</a>
+        {% endfor %}
+    </div>
+
+    {% if quotes %}
+    <table>
+        <thead>
+            <tr><th>#</th><th>Cliente</th><th>Producto</th><th>Pers.</th><th>P. Unit.</th><th>Envío</th><th>Total</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            {% for q in quotes %}
+            <tr>
+                <td>{{ q.id }}</td>
+                <td>{{ q.client.name }}</td>
+                <td>{{ q.product.name }}</td>
+                <td>{{ q.persons }}</td>
+                <td class="amount">${{ q.unit_price|floatformat:2 }}</td>
+                <td class="amount">${{ q.delivery_cost|floatformat:2 }}</td>
+                <td class="amount">${{ q.grand_total|floatformat:2 }}</td>
+                <td>{{ q.due_date|date:"d/m/Y"|default:'—' }}</td>
+                <td><span class="badge-{{ q.status }}">{{ q.get_status_display }}</span></td>
+                <td class="actions">
+                    {% if q.status == 'draft' %}
+                    <a href="{% url 'quote_send' q.id %}" class="btn btn-sm btn-primary" onclick="return confirm('¿Enviar cotización #{{ q.id }} al cliente?')">Enviar</a>
+                    {% endif %}
+                    {% if q.status == 'sent' %}
+                    <a href="{% url 'quote_approve' q.id %}" class="btn btn-sm btn-success" onclick="return confirm('¿Aprobar y convertir a pedido?')">Aprobar</a>
+                    {% endif %}
+                    <a href="{% url 'quote_edit' q.id %}" class="btn btn-sm btn-outline">Editar</a>
+                    <a href="{% url 'quote_delete' q.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar cotización #{{ q.id }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📋</div>
+        <h3>No hay cotizaciones{% if status_filter %} en este estado{% endif %}</h3>
+        <p><a href="{% url 'quote_maker' %}">Crear primera cotización</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

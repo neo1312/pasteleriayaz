@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparar Precios - Pastelería Yaz</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%); color: #3d2817; line-height: 1.6; min-height: 100vh; }
+        header { background: linear-gradient(135deg, #d4a373 0%, #c99963 100%); color: white; padding: 30px 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+        header .header-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        header h1 { font-size: 1.8em; font-weight: 300; }
+        header nav { display: flex; gap: 10px; flex-wrap: wrap; }
+        header nav a { color: white; text-decoration: none; padding: 8px 16px; border: 2px solid rgba(255,255,255,0.4); border-radius: 6px; font-size: 0.9em; font-weight: 500; transition: all 0.3s ease; }
+        header nav a:hover { background: rgba(255,255,255,0.15); border-color: white; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .back-btn { display: inline-block; margin-bottom: 20px; padding: 10px 20px; background: #d4a373; color: white; text-decoration: none; border-radius: 8px; transition: all 0.3s ease; font-weight: 600; }
+        .back-btn:hover { background: #c99963; transform: translateX(-5px); }
+        .search-box { background: white; padding: 25px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        .search-box select { padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95em; min-width: 300px; }
+        .search-box button { padding: 10px 20px; background: #d4a373; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+        .search-box button:hover { background: #c99963; }
+        .info-card { background: white; padding: 20px 25px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); border-left: 4px solid #d4a373; }
+        .info-card h2 { margin-bottom: 5px; }
+        .info-card .sub { color: #666; font-size: 0.95em; margin-top: 5px; }
+        .info-card .sub span { margin-right: 20px; }
+        .table-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); }
+        table { width: 100%; border-collapse: collapse; }
+        table thead { background: linear-gradient(135deg, #d4a373 0%, #c99963 100%); color: white; }
+        table th { padding: 15px; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; }
+        table td { padding: 15px; border-bottom: 1px solid #eee; }
+        table tbody tr:hover { background: #faf8f3; }
+        .cheapest-row { background: #e8f5e9 !important; }
+        .cheapest-row td { font-weight: 600; }
+        .price-cheapest { color: #080; font-weight: 700; }
+        .price-diff { color: #c00; }
+        .footnote { color: #666; margin-top: 10px; font-size: 0.9em; }
+        .empty-state { padding: 40px; text-align: center; color: #999; }
+        .empty-state a { color: #d4a373; }
+        footer { background: #3d2817; color: white; text-align: center; padding: 30px 20px; margin-top: 60px; }
+        @media (max-width: 768px) { .search-box { flex-direction: column; } .search-box select { width: 100%; min-width: auto; } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <h1>🔍 Comparar Precios</h1>
+            <nav>
+                <a href="{% url 'control_dashboard' %}">Panel</a>
+                <a href="{% url 'admin_dashboard' %}">Reportes</a>
+                <a href="{% url 'gallery' %}">Tienda</a>
+                <a href="{% url 'admin:logout' %}">Salir</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <a href="{% url 'admin_dashboard' %}" class="back-btn">← Volver a Reportes</a>
+
+        <div class="search-box">
+            <form method="get" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                <label for="raw_product" style="font-weight: 600;">Seleccionar Materia Prima:</label>
+                <select name="raw_product" id="raw_product">
+                    <option value="">— elige un producto —</option>
+                    {% for rp in raw_products %}
+                        <option value="{{ rp.pk }}" {% if rp.pk == selected_id %}selected{% endif %}>
+                            {{ rp.name }}{% if rp.brand %} [{{ rp.brand }}]{% endif %} ({{ rp.unit }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Comparar Precios</button>
+            </form>
+        </div>
+
+        {% if selected_rp %}
+            <div class="info-card">
+                <h2>{{ selected_rp.name }}{% if selected_rp.brand %} — <em>{{ selected_rp.brand }}</em>{% endif %} <small style="color:#666;font-size:14px;">por {{ selected_rp.unit }}</small></h2>
+                <div class="sub">
+                    <span>Costo promedio: <strong>${{ selected_rp.average_cost|floatformat:6 }}</strong></span>
+                    <span>Último costo: <strong>${{ selected_rp.cost_per_unit|floatformat:6 }}</strong></span>
+                    <span>Stock: <strong>{{ selected_rp.quantity_in_stock }} {{ selected_rp.unit }}</strong></span>
+                </div>
+            </div>
+
+            {% if entries %}
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>#</th><th>Proveedor</th><th>Contacto</th><th style="text-align:right;">Precio / {{ selected_rp.unit }}</th><th style="text-align:center;">vs Más Barato</th><th>Notas</th><th>Actualizado</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in entries %}
+                                <tr class="{% if forloop.first %}cheapest-row{% endif %}">
+                                    <td style="font-weight:bold;">{% if forloop.first %}1 ⭐{% else %}{{ forloop.counter }}{% endif %}</td>
+                                    <td style="font-weight:bold;">{{ entry.provider.name }}</td>
+                                    <td>{{ entry.provider.contact_person }}</td>
+                                    <td style="text-align:right;{% if forloop.first %}color:#080;{% endif %}">${{ entry.unit_price|floatformat:6 }}</td>
+                                    <td style="text-align:center;{% if forloop.first %}color:#080;{% else %}color:#c00;{% endif %}">{% if forloop.first %}Más Barato{% else %}+${{ entry.diff_from_cheapest|floatformat:6 }}{% endif %}</td>
+                                    <td>{{ entry.notes }}</td>
+                                    <td style="color:#999;font-size:12px;">{{ entry.updated_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="footnote">{{ entries|length }} proveedor{{ entries|length|pluralize:"es" }} encontrados · ordenado más barato → más caro</p>
+            {% else %}
+                <div class="table-container">
+                    <div class="empty-state">
+                        <p>No hay precios de proveedores registrados para este producto aún.</p>
+                        <p style="margin-top:10px;">Los precios se registran automáticamente desde las compras, o puedes agregarlos manualmente en el Admin.</p>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <footer><p>✨ Sistema de Gestión - Pastelería Yaz ✨</p></footer>
+</body>
+</html>

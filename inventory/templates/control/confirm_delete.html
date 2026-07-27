@@ -1,0 +1,17 @@
+{% extends 'control/base.html' %}
+{% block title %}Eliminar {{ object }} - Pastelería Yaz{% endblock %}
+{% block page_title %}🗑️ Confirmar Eliminación{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:500px;text-align:center;">
+    <p style="font-size:1.1em;margin-bottom:20px;">
+        ¿Estás seguro de eliminar <strong>{{ object }}</strong>?
+    </p>
+    <p style="color:#999;margin-bottom:24px;">Esta acción no se puede deshacer.</p>
+    <form method="post" style="display:flex;gap:10px;justify-content:center;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">🗑️ Eliminar</button>
+        <a href="{% url cancel_url %}" class="btn btn-outline">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

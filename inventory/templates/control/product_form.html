@@ -1,0 +1,77 @@
+{% extends 'control/base.html' %}
+{% block title %}{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Producto - Pastelería Yaz{% endblock %}
+{% block page_title %}{% if form.instance.pk %}✏️ Editar{% else %}➕ Nuevo{% endif %} Producto{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre</label>
+                <input type="text" name="name" value="{{ form.name.value|default:'' }}" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Categoría</label>
+                <select name="category" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    {% for v, l in form.fields.category.choices %}
+                    <option value="{{ v }}" {% if form.category.value == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción</label>
+            <textarea name="description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:80px;">{{ form.description.value|default:'' }}</textarea>
+        </div>
+        <div class="grid-3">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Precio</label>
+                <input type="number" name="price" value="{{ form.price.value|default:'0' }}" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Stock</label>
+                <input type="number" name="quantity_in_stock" value="{{ form.quantity_in_stock.value|default:'0' }}" step="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Reorden</label>
+                <input type="number" name="reorder_level" value="{{ form.reorder_level.value|default:'10' }}" step="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Complejidad</label>
+                <select name="complexity_tier" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Sin complejidad —</option>
+                    {% for t in tiers %}
+                    <option value="{{ t.id }}" {% if form.complexity_tier.value|stringformat:'s' == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Mano de obra x porción</label>
+                <input type="number" name="base_labor_per_portion" value="{{ form.base_labor_per_portion.value|default:'0' }}" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas mín.</label>
+                <input type="number" name="min_persons" value="{{ form.min_persons.value|default:'1' }}" min="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas máx.</label>
+                <input type="number" name="max_persons" value="{{ form.max_persons.value|default:'100' }}" min="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                <input type="checkbox" name="is_available" {% if form.is_available.value %}checked{% endif %}> Disponible en tienda
+            </label>
+        </div>
+        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
+            <button type="submit" class="btn btn-success">💾 Guardar</button>
+            <a href="{% url 'product_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

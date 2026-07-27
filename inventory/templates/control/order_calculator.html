@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Pedidos - Pastelería Yaz</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%);
+            color: #3d2817;
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(135deg, #d4a373 0%, #c99963 100%);
+            color: white; padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        header .header-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+        }
+        header h1 { font-size: 1.5em; }
+        header nav a {
+            color: white; text-decoration: none; padding: 8px 16px;
+            border: 2px solid rgba(255,255,255,0.4); border-radius: 6px;
+            font-size: 0.9em; transition: all 0.3s;
+        }
+        header nav a:hover { background: rgba(255,255,255,0.15); border-color: white; }
+        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .card {
+            background: white; border-radius: 12px; padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .card h2 {
+            font-size: 1.3em; margin-bottom: 20px; color: #3d2817;
+            border-bottom: 2px solid #d4a373; padding-bottom: 10px;
+        }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block; font-weight: 600; margin-bottom: 6px;
+            font-size: 0.9em; color: #555;
+        }
+        .form-group select, .form-group input, .form-group textarea {
+            width: 100%; padding: 10px 14px;
+            border: 2px solid #e8d4c0; border-radius: 8px;
+            font-size: 1em; transition: border-color 0.3s; outline: none;
+            background: white;
+        }
+        .form-group select:focus, .form-group input:focus, .form-group textarea:focus { border-color: #d4a373; }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+
+        .price-display { padding: 10px 0; }
+        .price-row {
+            display: flex; justify-content: space-between; padding: 8px 0;
+            font-size: 1em; color: #555;
+        }
+        .price-row.total {
+            border-top: 2px solid #d4a373; margin-top: 8px; padding-top: 12px;
+            font-weight: 700; color: #3d2817; font-size: 1.2em;
+        }
+        .price-row .label { display: flex; align-items: center; gap: 6px; }
+        .price-row .value { font-weight: 600; }
+        .price-row.total .value { font-size: 1.1em; }
+
+        .btn {
+            padding: 12px 24px; border-radius: 8px; font-weight: 600;
+            text-decoration: none; display: inline-block; font-size: 1em;
+            transition: all 0.3s; border: none; cursor: pointer;
+        }
+        .btn-primary { background: #d4a373; color: white; width: 100%; }
+        .btn-primary:hover { background: #c99963; }
+        .btn-success { background: #28a745; color: white; width: 100%; }
+        .btn-success:hover { background: #218838; }
+
+        .messages { margin-bottom: 20px; }
+        .messages .success {
+            background: #d4edda; color: #155724; padding: 12px; border-radius: 8px; margin-bottom: 8px;
+        }
+        .messages .error {
+            background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 8px;
+        }
+
+        .empty-state { text-align: center; padding: 40px; color: #999; }
+        .empty-state h3 { font-size: 1.2em; color: #666; margin-bottom: 8px; }
+
+        .approve-section {
+            margin-top: 25px; padding: 20px;
+            background: #f0faf0; border: 2px solid #28a745;
+            border-radius: 12px; display: none;
+        }
+        .approve-section h3 { color: #155724; margin-bottom: 15px; }
+
+        footer {
+            background: #3d2817; color: white; text-align: center;
+            padding: 30px 20px; margin-top: 60px;
+        }
+
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <h1>🧮 Calculadora de Pedidos</h1>
+            <nav>
+                <a href="{% url 'control_dashboard' %}">Panel</a>
+                <a href="{% url 'quotes_list' %}">Cotizaciones</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="grid">
+            <div class="card">
+                <h2>📋 Parámetros</h2>
+
+                <div class="form-group">
+                    <label>Producto</label>
+                    <select id="id_product" required onchange="updatePrice()">
+                        <option value="">— Seleccionar producto —</option>
+                        {% for p in products %}
+                        <option value="{{ p.id }}" data-min="{{ p.min_persons|default:1 }}" data-max="{{ p.max_persons|default:1000 }}">
+                            {{ p.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Personas</label>
+                    <input type="number" id="id_persons" value="1" min="1" max="1000" oninput="updatePrice()">
+                    <small id="persons_hint" style="color: #999; font-size: 0.85em;"></small>
+                </div>
+
+                <div class="form-group">
+                    <label>Nivel de Complejidad</label>
+                    <select id="id_complexity_tier" onchange="updatePrice()">
+                        <option value="">— Predeterminado del producto —</option>
+                        {% for t in tiers %}
+                        <option value="{{ t.id }}">{{ t.name }} (+{{ t.surcharge_percentage }}%)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>💰 Desglose de Precio</h2>
+                <div class="price-display" id="priceDisplay">
+                    <div class="empty-state">
+                        <h3>Selecciona un producto</h3>
+                        <p>Los precios se actualizarán automáticamente.</p>
+                    </div>
+                </div>
+
+                <div class="approve-section" id="approveSection">
+                    <h3>✅ Crear Pedido</h3>
+                    <form method="post" action="{% url 'order_calculator' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="product" id="approve_product">
+                        <input type="hidden" name="persons" id="approve_persons">
+                        <input type="hidden" name="complexity_tier" id="approve_tier">
+
+                        <div class="form-group">
+                            <label>Cliente</label>
+                            <select name="client" required>
+                                <option value="">— Seleccionar cliente —</option>
+                                {% for c in clients %}
+                                <option value="{{ c.id }}">{{ c.name }} ({{ c.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Notas de diseño</label>
+                            <textarea name="design_notes" placeholder="Decoración, colores, mensaje..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">💾 Crear Pedido</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>✨ Sistema de Gestión - Pastelería Yaz ✨</p>
+    </footer>
+
+    <script>
+        function updatePrice() {
+            const productId = document.getElementById('id_product').value;
+            const persons = parseInt(document.getElementById('id_persons').value) || 1;
+            const tierId = document.getElementById('id_complexity_tier').value;
+            const display = document.getElementById('priceDisplay');
+            const approve = document.getElementById('approveSection');
+
+            if (!productId) {
+                display.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Selecciona un producto</h3>
+                        <p>Los precios se actualizarán automáticamente.</p>
+                    </div>
+                `;
+                approve.style.display = 'none';
+                return;
+            }
+
+            const sel = document.getElementById('id_product');
+            const opt = sel.options[sel.selectedIndex];
+            const min = parseInt(opt.dataset.min) || 1;
+            const max = parseInt(opt.dataset.max) || 1000;
+            document.getElementById('persons_hint').textContent = `Mín: ${min} · Máx: ${max}`;
+
+            const url = `/api/calcular-precio/?product=${productId}&persons=${persons}${tierId ? '&complexity_tier=' + tierId : ''}`;
+
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        display.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${data.error}</p></div>`;
+                        approve.style.display = 'none';
+                        return;
+                    }
+
+                    const total = parseFloat(data.total);
+
+                    display.innerHTML = `
+                        <div class="price-row">
+                            <span class="label">🧾 Ingredientes</span>
+                            <span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="label">👨‍🍳 Mano de obra</span>
+                            <span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="label">🎨 Recargo por diseño</span>
+                            <span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="label">💰 Precio por persona</span>
+                            <span class="value">$${parseFloat(data.price_per_person).toFixed(2)}</span>
+                        </div>
+                        <div class="price-row total">
+                            <span class="label">📦 Total (${persons} pers.)</span>
+                            <span class="value">$${total.toFixed(2)}</span>
+                        </div>
+                    `;
+
+                    document.getElementById('approve_product').value = productId;
+                    document.getElementById('approve_persons').value = persons;
+                    document.getElementById('approve_tier').value = tierId;
+                    approve.style.display = 'block';
+                })
+                .catch(err => {
+                    display.innerHTML = `<div class="empty-state"><h3>Error de conexión</h3><p>${err}</p></div>`;
+                    approve.style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+{% extends 'control/base.html' %}
+{% block title %}Insumos - Pastelería Yaz{% endblock %}
+{% block page_title %}🥚 Insumos{% endblock %}
+{% block header_actions %}
+<a href="{% url 'rawproduct_create' %}" class="btn btn-primary">+ Nuevo</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="get" class="search-bar" style="margin-bottom:0;">
+        <input type="text" name="search" placeholder="Buscar..." value="{{ search }}">
+        <button type="submit" class="btn btn-outline">Buscar</button>
+    </form>
+</div>
+<div class="card">
+    {% if materials %}
+    <table>
+        <thead><tr><th>Nombre</th><th>Marca</th><th>Unidad</th><th>Costo</th><th>Stock</th><th>Reorden</th><th>Proveedor</th><th>Acciones</th></tr></thead>
+        <tbody>
+            {% for m in materials %}
+            <tr>
+                <td><strong>{{ m.name }}</strong></td>
+                <td>{{ m.brand|default:'—' }}</td>
+                <td>{{ m.unit }}</td>
+                <td class="amount">${{ m.cost_per_unit|floatformat:4 }}</td>
+                <td class="amount">{{ m.quantity_in_stock }}</td>
+                <td class="amount">{{ m.reorder_level }}</td>
+                <td>{{ m.provider.name|default:'—' }}</td>
+                <td class="actions">
+                    <a href="{% url 'rawproduct_edit' m.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'rawproduct_delete' m.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar {{ m.name }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">🥚</div><h3>No hay insumos</h3></div>
+    {% endif %}
+</div>
+{% endblock %}

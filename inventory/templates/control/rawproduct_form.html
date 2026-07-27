@@ -1,0 +1,58 @@
+{% extends 'control/base.html' %}
+{% block title %}{% if object.pk %}Editar{% else %}Nuevo{% endif %} Insumo - Pastelería Yaz{% endblock %}
+{% block page_title %}{% if object.pk %}✏️ Editar{% else %}➕ Nuevo{% endif %} Insumo{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+    <form method="post">
+        {% csrf_token %}
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre</label>
+                <input type="text" name="name" value="{{ object.name|default:'' }}" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Marca</label>
+                <input type="text" name="brand" value="{{ object.brand|default:'' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+        <div class="grid-3">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Unidad</label>
+                <select name="unit" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    {% for v, l in units %}
+                    <option value="{{ v }}" {% if object.unit == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Costo/Unidad</label>
+                <input type="number" name="cost_per_unit" value="{{ object.cost_per_unit|default:'0' }}" step="0.000001" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Stock</label>
+                <input type="number" name="quantity_in_stock" value="{{ object.quantity_in_stock|default:'0' }}" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Reorden</label>
+                <input type="number" name="reorder_level" value="{{ object.reorder_level|default:'10' }}" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Proveedor</label>
+                <select name="provider" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Sin proveedor —</option>
+                    {% for p in providers %}
+                    <option value="{{ p.id }}" {% if object.provider.id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
+            <button type="submit" class="btn btn-success">💾 Guardar</button>
+            <a href="{% url 'rawproduct_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

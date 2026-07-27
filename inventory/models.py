@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from decimal import Decimal
 
 
@@ -24,6 +25,34 @@ def _conversion_factor(from_unit, to_unit):
     if from_unit == to_unit:
         return Decimal('1')
     return _UNIT_FACTORS.get((from_unit, to_unit), Decimal('1'))
+
+
+class ComplexityTier(models.Model):
+    name = models.CharField(max_length=50, verbose_name="Nombre")
+    surcharge_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Recargo %")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+
+    class Meta:
+        ordering = ['surcharge_percentage']
+        verbose_name = "Nivel de Complejidad"
+        verbose_name_plural = "Niveles de Complejidad"
+
+    def __str__(self):
+        return f"{self.name} (+{self.surcharge_percentage}%)"
+
+
+class TransportZone(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Nombre")
+    radius_km = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name="Radio (km)")
+    base_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Tarifa base")
+    fee_per_km = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Tarifa por km")
+
+    class Meta:
+        verbose_name = "Zona de Transporte"
+        verbose_name_plural = "Zonas de Transporte"
+
+    def __str__(self):
+        return f"{self.name} (${self.base_fee} + ${self.fee_per_km}/km)"
 
 
 class Product(models.Model):
@@ -60,9 +89,13 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
     is_available = models.BooleanField(default=True, verbose_name="Disponible")
+    complexity_tier = models.ForeignKey(ComplexityTier, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Nivel de complejidad")
+    base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
+    min_persons = models.PositiveIntegerField(default=1, verbose_name="Personas mínimas")
+    max_persons = models.PositiveIntegerField(default=100, verbose_name="Personas máximas")
 
     def calculate_cost(self):
-        """Sum ingredient costs using each raw product's weighted average cost."""
+        """Return ingredient cost for ONE portion (1 person)."""
         total = Decimal('0')
         for ing in self.ingredients.select_related('raw_product'):
             rp = ing.raw_product
@@ -71,20 +104,37 @@ class Product(models.Model):
             total += ing.quantity * factor * unit_cost
         return total
 
+    def calculate_price_for(self, persons):
+        """Calculate total price for N persons including ingredients, labor, and design surcharge."""
+        persons = Decimal(str(persons))
+        ingredient_cost = self.calculate_cost() * persons
+        labor_cost = (self.base_labor_per_portion or Decimal('0')) * persons
+        base_total = ingredient_cost + labor_cost
+        if self.complexity_tier:
+            surcharge = base_total * (self.complexity_tier.surcharge_percentage / Decimal('100'))
+        else:
+            surcharge = Decimal('0')
+        return {
+            'persons': persons,
+            'ingredient_cost': ingredient_cost,
+            'labor_cost': labor_cost,
+            'base_total': base_total,
+            'design_surcharge': surcharge,
+            'total': base_total + surcharge,
+            'price_per_person': (base_total + surcharge) / persons if persons > 0 else Decimal('0'),
+        }
+
     def calculate_margin(self):
         if self.cost > 0:
             return ((self.price - self.cost) / self.cost) * 100
         return 0
 
-    def check_stock_for(self, order_quantity):
-        """
-        Returns a list of shortage dicts for producing `order_quantity` units.
-        Empty list means all materials are available.
-        """
+    def check_stock_for(self, persons):
+        """Returns shortage list for producing enough for N persons."""
         shortages = []
         for ing in self.ingredients.select_related('raw_product'):
             rp = ing.raw_product
-            needed = ing.quantity * _conversion_factor(ing.unit, rp.unit) * Decimal(str(order_quantity))
+            needed = ing.quantity * _conversion_factor(ing.unit, rp.unit) * Decimal(str(persons))
             if needed > (rp.quantity_in_stock or Decimal('0')):
                 shortages.append({
                     'name':      rp.name,
@@ -96,14 +146,21 @@ class Product(models.Model):
         return shortages
 
     def __str__(self):
-        return f"{self.name} ({self.quantity_in_stock} in stock)"
+        return f"{self.name} ({self.quantity_in_stock} en stock)"
 
     class Meta:
         ordering = ['name']
-        verbose_name_plural = "Products"
+        verbose_name = "Producto"
+        verbose_name_plural = "Productos"
 
 
 class Client(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name="Usuario",
+        null=True, blank=True,
+    )
     name = models.CharField(max_length=200, verbose_name="Nombre")
     email = models.EmailField(verbose_name="Email")
     phone = models.CharField(max_length=20, verbose_name="Teléfono")
@@ -128,26 +185,27 @@ class Order(models.Model):
 
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='orders', verbose_name="Cliente")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='orders', verbose_name="Producto")
-    quantity = models.IntegerField(default=1, verbose_name="Cantidad")
-    unit_price = models.DecimalField(max_digits=16, decimal_places=6, default=0, help_text="Precio por unidad", verbose_name="Precio unitario")
+    persons = models.PositiveIntegerField(default=1, verbose_name="Personas")
+    unit_price = models.DecimalField(max_digits=16, decimal_places=6, default=0, help_text="Precio por persona", verbose_name="Precio por persona")
+    design_notes = models.TextField(blank=True, verbose_name="Notas de diseño")
+    design_surcharge = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Recargo por diseño")
+    labor_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Mano de obra")
     total_price = models.DecimalField(max_digits=16, decimal_places=6, verbose_name="Precio total")
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="Fecha del pedido")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Estado")
     notes = models.TextField(blank=True, null=True, verbose_name="Notas")
 
     def save(self, *args, **kwargs):
-        # Auto-populate unit_price from product price if not set
-        if self.product and (not self.unit_price or self.unit_price == 0):
-            self.unit_price = self.product.price
-        
-        # Auto-calculate total_price from unit_price and quantity
-        if self.unit_price and self.quantity:
-            self.total_price = (self.unit_price * Decimal(str(self.quantity))).quantize(Decimal('0.000001'))
-        
+        if self.product:
+            breakdown = self.product.calculate_price_for(self.persons or 1)
+            self.unit_price = breakdown['price_per_person']
+            self.design_surcharge = breakdown['design_surcharge']
+            self.labor_cost = breakdown['labor_cost']
+            self.total_price = breakdown['total']
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Pedido #{self.id} - {self.client.name} ({self.status})"
+        return f"Pedido #{self.id} – {self.client.name} ({self.product.name} × {self.persons} pers.)"
 
     class Meta:
         ordering = ['-order_date']
@@ -156,45 +214,47 @@ class Order(models.Model):
 
 
 class Provider(models.Model):
-    name = models.CharField(max_length=200)
-    contact_person = models.CharField(max_length=200, blank=True)
-    email = models.EmailField()
-    phone = models.CharField(max_length=20)
-    address = models.TextField(blank=True)
-    city = models.CharField(max_length=100, blank=True)
-    postal_code = models.CharField(max_length=20, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    name = models.CharField(max_length=200, verbose_name="Nombre")
+    contact_person = models.CharField(max_length=200, blank=True, verbose_name="Persona de contacto")
+    email = models.EmailField(verbose_name="Email")
+    phone = models.CharField(max_length=20, verbose_name="Teléfono")
+    address = models.TextField(blank=True, verbose_name="Dirección")
+    city = models.CharField(max_length=100, blank=True, verbose_name="Ciudad")
+    postal_code = models.CharField(max_length=20, blank=True, verbose_name="Código postal")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
 
     def __str__(self):
         return f"{self.name} ({self.contact_person})"
 
     class Meta:
         ordering = ['name']
+        verbose_name = "Proveedor"
+        verbose_name_plural = "Proveedores"
 
 
 class RawProduct(models.Model):
     UNIT_CHOICES = [
-        ('kg', 'Kilogram'),
-        ('g', 'Gram'),
-        ('l', 'Liter'),
-        ('ml', 'Milliliter'),
-        ('unit', 'Unit'),
-        ('box', 'Box'),
-        ('dozen', 'Dozen'),
+        ('kg', 'Kilogramo'),
+        ('g', 'Gramo'),
+        ('l', 'Litro'),
+        ('ml', 'Mililitro'),
+        ('unit', 'Unidad'),
+        ('box', 'Caja'),
+        ('dozen', 'Docena'),
     ]
 
-    name = models.CharField(max_length=200)
-    brand = models.CharField(max_length=200, blank=True, help_text="Brand or manufacturer")
-    description = models.TextField(blank=True)
-    unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg')
-    cost_per_unit = models.DecimalField(max_digits=10, decimal_places=6, verbose_name="Last Cost", help_text="Cost from most recent purchase", default=0)
-    average_cost = models.DecimalField(max_digits=10, decimal_places=6, default=0, help_text="Weighted average cost across all purchases")
-    quantity_in_stock = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    reorder_level = models.DecimalField(max_digits=10, decimal_places=2, default=10)
-    provider = models.ForeignKey(Provider, on_delete=models.SET_NULL, null=True, blank=True, related_name='raw_products')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    name = models.CharField(max_length=200, verbose_name="Nombre")
+    brand = models.CharField(max_length=200, blank=True, help_text="Marca o fabricante", verbose_name="Marca")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg', verbose_name="Unidad")
+    cost_per_unit = models.DecimalField(max_digits=10, decimal_places=6, verbose_name="Último costo", help_text="Costo de la compra más reciente", default=0)
+    average_cost = models.DecimalField(max_digits=10, decimal_places=6, default=0, help_text="Costo promedio ponderado entre todas las compras", verbose_name="Costo promedio")
+    quantity_in_stock = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Cantidad en stock")
+    reorder_level = models.DecimalField(max_digits=10, decimal_places=2, default=10, verbose_name="Nivel de reorden")
+    provider = models.ForeignKey(Provider, on_delete=models.SET_NULL, null=True, blank=True, related_name='raw_products', verbose_name="Proveedor")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
 
     def __str__(self):
         brand_str = f" [{self.brand}]" if self.brand else ""
@@ -202,22 +262,22 @@ class RawProduct(models.Model):
 
     class Meta:
         ordering = ['name', 'brand']
-        verbose_name_plural = "Raw Products"
+        verbose_name = "Materia Prima"
+        verbose_name_plural = "Materias Primas"
 
 
 class ProviderCatalog(models.Model):
-    """Records the current/latest price a provider offers for a raw product."""
-    raw_product  = models.ForeignKey(RawProduct, on_delete=models.CASCADE, related_name='provider_prices')
-    provider     = models.ForeignKey(Provider,   on_delete=models.CASCADE, related_name='catalog_prices')
-    unit_price   = models.DecimalField(max_digits=16, decimal_places=6, help_text="Price per unit offered by this provider")
-    notes        = models.CharField(max_length=300, blank=True)
-    updated_at   = models.DateTimeField(auto_now=True)
+    raw_product  = models.ForeignKey(RawProduct, on_delete=models.CASCADE, related_name='provider_prices', verbose_name="Materia prima")
+    provider     = models.ForeignKey(Provider,   on_delete=models.CASCADE, related_name='catalog_prices', verbose_name="Proveedor")
+    unit_price   = models.DecimalField(max_digits=16, decimal_places=6, help_text="Precio por unidad ofrecido por este proveedor", verbose_name="Precio unitario")
+    notes        = models.CharField(max_length=300, blank=True, verbose_name="Notas")
+    updated_at   = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
 
     class Meta:
         unique_together = ('raw_product', 'provider')
         ordering = ['unit_price']
-        verbose_name = "Provider Price"
-        verbose_name_plural = "Provider Prices"
+        verbose_name = "Precio de Proveedor"
+        verbose_name_plural = "Precios de Proveedores"
 
     def __str__(self):
         return f"{self.provider.name} → {self.raw_product.name}: ${self.unit_price}"
@@ -225,35 +285,36 @@ class ProviderCatalog(models.Model):
 
 class Purchase(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('received', 'Received'),
-        ('cancelled', 'Cancelled'),
+        ('pending', 'Pendiente'),
+        ('received', 'Recibida'),
+        ('cancelled', 'Cancelada'),
     ]
 
-    provider = models.ForeignKey(Provider, on_delete=models.PROTECT, related_name='purchases')
-    purchase_date = models.DateTimeField(auto_now_add=True)
-    delivery_date = models.DateField(blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    notes = models.TextField(blank=True)
+    provider = models.ForeignKey(Provider, on_delete=models.PROTECT, related_name='purchases', verbose_name="Proveedor")
+    purchase_date = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de compra")
+    delivery_date = models.DateField(blank=True, null=True, verbose_name="Fecha de entrega")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Estado")
+    notes = models.TextField(blank=True, verbose_name="Notas")
 
     @property
     def total_cost(self):
         return sum(item.item_total for item in self.items.all())
 
     def __str__(self):
-        return f"Purchase #{self.id} – {self.provider.name} ({self.status})"
+        return f"Compra #{self.id} – {self.provider.name} ({self.get_status_display()})"
 
     class Meta:
         ordering = ['-purchase_date']
-        verbose_name_plural = "Purchases"
+        verbose_name = "Compra"
+        verbose_name_plural = "Compras"
 
 
 class PurchaseItem(models.Model):
-    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
-    raw_product = models.ForeignKey(RawProduct, on_delete=models.PROTECT, related_name='purchase_items', verbose_name="Raw Product")
-    quantity = models.DecimalField(max_digits=10, decimal_places=2)
-    unit_cost = models.DecimalField(max_digits=16, decimal_places=6, help_text="Cost per unit")
-    item_total = models.DecimalField(max_digits=16, decimal_places=6, editable=False, default=0)
+    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items', verbose_name="Compra")
+    raw_product = models.ForeignKey(RawProduct, on_delete=models.PROTECT, related_name='purchase_items', verbose_name="Materia prima")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Cantidad")
+    unit_cost = models.DecimalField(max_digits=16, decimal_places=6, help_text="Costo por unidad", verbose_name="Costo unitario")
+    item_total = models.DecimalField(max_digits=16, decimal_places=6, editable=False, default=0, verbose_name="Total")
 
     def save(self, *args, **kwargs):
         self.item_total = self.quantity * self.unit_cost
@@ -263,55 +324,62 @@ class PurchaseItem(models.Model):
         return f"{self.raw_product.name} x{self.quantity}"
 
     class Meta:
-        verbose_name = "Purchase Item"
-        verbose_name_plural = "Purchase Items"
+        verbose_name = "Artículo de Compra"
+        verbose_name_plural = "Artículos de Compra"
 
 
 class RecipeIngredient(models.Model):
     UNIT_CHOICES = [
-        ('g', 'Grams'),
-        ('mg', 'Milligrams'),
-        ('pcs', 'Pieces'),
+        ('g', 'Gramos'),
+        ('mg', 'Miligramos'),
+        ('pcs', 'Piezas'),
     ]
 
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Product")
-    raw_product = models.ForeignKey(RawProduct, on_delete=models.CASCADE, related_name='recipe_uses', verbose_name="Raw Product")
-    quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Amount needed")
-    unit = models.CharField(max_length=5, choices=UNIT_CHOICES, default='g')
-    notes = models.CharField(max_length=200, blank=True, help_text="Optional note, e.g. 'sifted', 'melted'")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Producto")
+    raw_product = models.ForeignKey(RawProduct, on_delete=models.CASCADE, related_name='recipe_uses', verbose_name="Materia prima")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad necesaria", verbose_name="Cantidad")
+    unit = models.CharField(max_length=5, choices=UNIT_CHOICES, default='g', verbose_name="Unidad")
+    notes = models.CharField(max_length=200, blank=True, help_text="Nota opcional, ej. 'tamizado', 'derretido'", verbose_name="Notas")
 
     def __str__(self):
-        return f"{self.quantity} {self.get_unit_display()} of {self.raw_product.name}"
+        return f"{self.quantity} {self.get_unit_display()} de {self.raw_product.name}"
 
     class Meta:
         unique_together = ('product', 'raw_product')
-        verbose_name = "Ingredient"
-        verbose_name_plural = "Ingredients"
+        verbose_name = "Ingrediente"
+        verbose_name_plural = "Ingredientes"
 
 
 class Quote(models.Model):
     STATUS_CHOICES = [
-        ('draft',    'Draft'),
-        ('sent',     'Sent'),
-        ('accepted', 'Accepted'),
-        ('rejected', 'Rejected'),
-        ('expired',  'Expired'),
+        ('draft',    'Borrador'),
+        ('sent',     'Enviada'),
+        ('accepted', 'Aceptada'),
+        ('rejected', 'Rechazada'),
+        ('expired',  'Expirada'),
     ]
 
-    client        = models.ForeignKey(Client,  on_delete=models.CASCADE, related_name='quotes')
-    product       = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='quotes')
-    quantity      = models.PositiveIntegerField(default=1)
-    unit_price    = models.DecimalField(max_digits=16, decimal_places=6, default=0, help_text="Price per unit (auto-filled from product)")
-    delivery_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0)
-    due_date      = models.DateField()
-    status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    notes         = models.TextField(blank=True)
-    created_at    = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
+    client        = models.ForeignKey(Client,  on_delete=models.CASCADE, related_name='quotes', verbose_name="Cliente")
+    product       = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='quotes', verbose_name="Producto")
+    persons       = models.PositiveIntegerField(default=1, verbose_name="Personas")
+    unit_price    = models.DecimalField(max_digits=16, decimal_places=6, default=0, help_text="Precio por persona", verbose_name="Precio por persona")
+    design_notes  = models.TextField(blank=True, verbose_name="Notas de diseño")
+    design_surcharge = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Recargo por diseño")
+    labor_cost    = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Mano de obra")
+    delivery_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Costo de envío")
+    due_date      = models.DateField(verbose_name="Fecha de vencimiento")
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name="Estado")
+    notes         = models.TextField(blank=True, verbose_name="Notas")
+    created_at    = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at    = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
+
+    @property
+    def ingredient_cost(self):
+        return self.product.calculate_cost() * Decimal(str(self.persons)) if self.product else Decimal('0')
 
     @property
     def total_price(self):
-        return (self.unit_price or Decimal('0')) * self.quantity
+        return (self.unit_price or Decimal('0')) * (self.persons or 1) + (self.design_surcharge or Decimal('0'))
 
     @property
     def grand_total(self):
@@ -322,9 +390,17 @@ class Quote(models.Model):
         from django.utils import timezone
         return (self.due_date - timezone.now().date()).days
 
+    def recalculate(self):
+        if self.product:
+            b = self.product.calculate_price_for(self.persons or 1)
+            self.unit_price = b['price_per_person']
+            self.labor_cost = b['labor_cost']
+            self.design_surcharge = b['design_surcharge']
+
     def __str__(self):
-        return f"Quote #{self.id} – {self.client.name} ({self.product.name} × {self.quantity})"
+        return f"Cotización #{self.id} – {self.client.name} ({self.product.name} × {self.persons} pers.)"
 
     class Meta:
         ordering = ['-created_at']
-        verbose_name_plural = "Quotes"
+        verbose_name = "Cotización"
+        verbose_name_plural = "Cotizaciones"

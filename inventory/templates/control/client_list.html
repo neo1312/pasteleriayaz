@@ -1,0 +1,42 @@
+{% extends 'control/base.html' %}
+{% block title %}Clientes - Pastelería Yaz{% endblock %}
+{% block page_title %}👥 Clientes{% endblock %}
+{% block header_actions %}
+<a href="{% url 'client_create' %}" class="btn btn-primary">+ Nuevo</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="get" class="search-bar" style="margin-bottom:0;">
+        <input type="text" name="search" placeholder="Buscar por nombre o email..." value="{{ search }}">
+        <button type="submit" class="btn btn-outline">Buscar</button>
+    </form>
+</div>
+
+<div class="card">
+    {% if clients %}
+    <table>
+        <thead>
+            <tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Usuario</th><th>Registro</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            {% for c in clients %}
+            <tr>
+                <td><strong>{{ c.name }}</strong></td>
+                <td>{{ c.email }}</td>
+                <td>{{ c.phone|default:'—' }}</td>
+                <td>{% if c.user %}{{ c.user.username }}{% else %}<span style="color:#999;">Sin cuenta</span>{% endif %}</td>
+                <td>{{ c.created_at|date:"d/m/Y" }}</td>
+                <td class="actions">
+                    <a href="{% url 'client_edit' c.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'client_delete' c.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar {{ c.name }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">👥</div><h3>No hay clientes</h3><p><a href="{% url 'client_create' %}">Crear primer cliente</a></p></div>
+    {% endif %}
+</div>
+{% endblock %}

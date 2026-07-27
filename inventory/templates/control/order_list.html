@@ -1,0 +1,41 @@
+{% extends 'control/base.html' %}
+{% block title %}Pedidos - Pastelería Yaz{% endblock %}
+{% block page_title %}📦 Pedidos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="filters">
+        <a href="{% url 'order_list' %}" class="filter-btn {% if not status_filter %}active{% endif %}">Todos</a>
+        {% for v, l in status_choices %}
+        <a href="?status={{ v }}" class="filter-btn {% if status_filter == v %}active{% endif %}">{{ l }}</a>
+        {% endfor %}
+    </div>
+
+    {% if orders %}
+    <table>
+        <thead>
+            <tr><th>#</th><th>Cliente</th><th>Producto</th><th>Pers.</th><th>Total</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            {% for o in orders %}
+            <tr>
+                <td>{{ o.id }}</td>
+                <td>{{ o.client.name }}</td>
+                <td>{{ o.product.name }}</td>
+                <td>{{ o.persons }}</td>
+                <td class="amount">${{ o.total_price|floatformat:2 }}</td>
+                <td>{{ o.order_date|date:"d/m/Y" }}</td>
+                <td><span class="badge-{{ o.status }}">{{ o.get_status_display }}</span></td>
+                <td class="actions">
+                    <a href="{% url 'order_edit' o.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'order_delete' o.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar pedido #{{ o.id }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">📦</div><h3>No hay pedidos</h3></div>
+    {% endif %}
+</div>
+{% endblock %}

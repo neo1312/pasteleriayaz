@@ -1,0 +1,163 @@
+{% extends 'control/base.html' %}
+{% block title %}{% if object.pk %}Editar{% else %}Nueva{% endif %} Compra - Pastelería Yaz{% endblock %}
+{% block page_title %}{% if object.pk %}✏️ Editar{% else %}➕ Nueva{% endif %} Compra{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:800px;">
+    <form method="post" id="purchaseForm">
+        {% csrf_token %}
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Proveedor</label>
+                <select name="provider" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Seleccionar —</option>
+                    {% for p in providers %}
+                    <option value="{{ p.id }}" {% if object.provider.id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Estado</label>
+                <select name="status" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    {% for v, l in status_choices %}
+                    <option value="{{ v }}" {% if object.status == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <h3 style="margin:24px 0 12px;font-size:1.05em;color:#333;">Artículos</h3>
+        <table id="itemsTable" style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+            <thead>
+                <tr style="background:#f5f0eb;">
+                    <th style="padding:8px 10px;text-align:left;font-size:0.85em;color:#555;">Insumo</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:0.85em;color:#555;width:120px;">Cantidad</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:0.85em;color:#555;width:120px;">Costo Unit.</th>
+                    <th style="padding:8px 10px;text-align:right;font-size:0.85em;color:#555;width:120px;">Subtotal</th>
+                    <th style="padding:8px 10px;width:40px;"></th>
+                </tr>
+            </thead>
+            <tbody id="itemsBody">
+                {% if items %}
+                {% for item in items %}
+                <tr class="item-row">
+                    <td style="padding:4px 10px;">
+                        <select name="raw_product[]" required style="width:100%;padding:8px 10px;border:2px solid #e8d4c0;border-radius:6px;font-size:0.9em;outline:none;background:white;" onchange="updateRowTotal(this)">
+                            <option value="">— Seleccionar —</option>
+                            {% for rp in raw_products %}
+                            <option value="{{ rp.id }}" data-unit="{{ rp.unit }}" {% if item.raw_product.id == rp.id %}selected{% endif %}>{{ rp.name }} ({{ rp.unit }})</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td style="padding:4px 10px;">
+                        <input type="number" name="quantity[]" value="{{ item.quantity }}" step="0.01" min="0" required style="width:100%;padding:8px 10px;border:2px solid #e8d4c0;border-radius:6px;font-size:0.9em;outline:none;" oninput="updateRowTotal(this)">
+                    </td>
+                    <td style="padding:4px 10px;">
+                        <input type="number" name="unit_cost[]" value="{{ item.unit_cost }}" step="0.000001" min="0" required style="width:100%;padding:8px 10px;border:2px solid #e8d4c0;border-radius:6px;font-size:0.9em;outline:none;" oninput="updateRowTotal(this)">
+                    </td>
+                    <td style="padding:4px 10px;text-align:right;">
+                        <span class="row-total" style="font-weight:600;">${{ item.item_total|floatformat:2 }}</span>
+                    </td>
+                    <td style="padding:4px 10px;text-align:center;">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)" style="padding:4px 8px;font-size:0.8em;">✕</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="item-row">
+                    <td style="padding:4px 10px;">
+                        <select name="raw_product[]" required style="width:100%;padding:8px 10px;border:2px solid #e8d4c0;border-radius:6px;font-size:0.9em;outline:none;background:white;" onchange="updateRowTotal(this)">
+                            <option value="">— Seleccionar —</option>
+                            {% for rp in raw_products %}
+                            <option value="{{ rp.id }}" data-unit="{{ rp.unit }}">{{ rp.name }} ({{ rp.unit }})</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td style="padding:4px 10px;">
+                        <input type="number" name="quantity[]" step="0.01" min="0" required style="width:100%;padding:8px 10px;border:2px solid #e8d4c0;border-radius:6px;font-size:0.9em;outline:none;" oninput="updateRowTotal(this)">
+                    </td>
+                    <td style="padding:4px 10px;">
+                        <input type="number" name="unit_cost[]" step="0.000001" min="0" required style="width:100%;padding:8px 10px;border:2px solid #e8d4c0;border-radius:6px;font-size:0.9em;outline:none;" oninput="updateRowTotal(this)">
+                    </td>
+                    <td style="padding:4px 10px;text-align:right;">
+                        <span class="row-total" style="font-weight:600;">$0.00</span>
+                    </td>
+                    <td style="padding:4px 10px;text-align:center;">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)" style="padding:4px 8px;font-size:0.8em;">✕</button>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
+            <button type="button" class="btn btn-outline" onclick="addRow()" style="padding:6px 14px;font-size:0.85em;">+ Agregar artículo</button>
+            <div style="margin-left:auto;font-size:1.1em;">
+                <strong>Total: </strong><span id="grandTotal" style="font-size:1.2em;color:#b8860b;">$0.00</span>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Notas</label>
+            <textarea name="notes" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;">{{ object.notes|default:'' }}</textarea>
+        </div>
+
+        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
+            <button type="submit" class="btn btn-success">💾 Guardar</button>
+            <a href="{% url 'purchase_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block modals %}
+<script>
+function updateRowTotal(el) {
+    var row = el.closest('tr');
+    var qty = parseFloat(row.querySelector('[name="quantity[]"]').value) || 0;
+    var cost = parseFloat(row.querySelector('[name="unit_cost[]"]').value) || 0;
+    var total = qty * cost;
+    row.querySelector('.row-total').textContent = '$' + total.toFixed(2);
+    updateGrandTotal();
+}
+
+function updateGrandTotal() {
+    var totals = document.querySelectorAll('.row-total');
+    var sum = 0;
+    totals.forEach(function(el) {
+        var val = parseFloat(el.textContent.replace('$', '').replace(',', '')) || 0;
+        sum += val;
+    });
+    document.getElementById('grandTotal').textContent = '$' + sum.toFixed(2);
+}
+
+function removeRow(btn) {
+    var rows = document.querySelectorAll('.item-row');
+    if (rows.length <= 1) return;
+    btn.closest('tr').remove();
+    updateGrandTotal();
+}
+
+function addRow() {
+    var tbody = document.getElementById('itemsBody');
+    var firstRow = tbody.querySelector('.item-row');
+    var clone = firstRow.cloneNode(true);
+    clone.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+    clone.querySelector('.row-total').textContent = '$0.00';
+    clone.querySelector('select').selectedIndex = 0;
+    tbody.appendChild(clone);
+    updateGrandTotal();
+}
+
+// Initial calculation
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.item-row').forEach(function(row) {
+        var qty = parseFloat(row.querySelector('[name="quantity[]"]').value) || 0;
+        var cost = parseFloat(row.querySelector('[name="unit_cost[]"]').value) || 0;
+        var total = qty * cost;
+        row.querySelector('.row-total').textContent = '$' + total.toFixed(2);
+    });
+    updateGrandTotal();
+});
+</script>
+{% endblock %}

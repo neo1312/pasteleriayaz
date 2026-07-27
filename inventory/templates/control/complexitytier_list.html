@@ -1,0 +1,31 @@
+{% extends 'control/base.html' %}
+{% block title %}Niveles de Complejidad - Pastelería Yaz{% endblock %}
+{% block page_title %}⚙️ Niveles de Complejidad{% endblock %}
+{% block header_actions %}
+<a href="{% url 'complexity_tier_create' %}" class="btn btn-primary">+ Nuevo</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    {% if tiers %}
+    <table>
+        <thead><tr><th>Nombre</th><th>Recargo %</th><th>Descripción</th><th>Acciones</th></tr></thead>
+        <tbody>
+            {% for t in tiers %}
+            <tr>
+                <td><strong>{{ t.name }}</strong></td>
+                <td>{{ t.surcharge_percentage }}%</td>
+                <td>{{ t.description|default:'—' }}</td>
+                <td class="actions">
+                    <a href="{% url 'complexity_tier_edit' t.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'complexity_tier_delete' t.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar {{ t.name }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">⚙️</div><h3>No hay niveles de complejidad</h3></div>
+    {% endif %}
+</div>
+{% endblock %}
