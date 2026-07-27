@@ -2,11 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Dashboard
-    path('', views.control_dashboard, name='control_dashboard'),
+    # Home — public gallery
+    path('', views.product_gallery, name='gallery'),
 
-    # Tienda pública
-    path('tienda/', views.product_gallery, name='gallery'),
+    # Dashboard — owner panel (login required)
+    path('dash/', views.control_dashboard, name='control_dashboard'),
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),
 
     # Productos
@@ -77,12 +77,4 @@ urlpatterns = [
     path('registro/', views.register, name='register'),
     path('ingresar/', views.client_login, name='login'),
     path('salir/', views.client_logout, name='logout'),
-
-    # Cliente — portal
-    path('mi-cuenta/', views.client_portal, name='client_portal'),
-
-    # Cliente — inquiry / quotes
-    path('product/<int:product_id>/solicitar/', views.submit_inquiry, name='submit_inquiry'),
-    path('cotizacion/<int:quote_id>/aceptar/', views.accept_quote, name='accept_quote'),
-    path('cotizacion/<int:quote_id>/rechazar/', views.reject_quote, name='reject_quote'),
 ]

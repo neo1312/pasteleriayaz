@@ -28,6 +28,7 @@ def product_detail(request, product_id):
 
 
 @login_required
+@login_required
 def control_dashboard(request):
     today = datetime.now().date()
     week_ago = today - timedelta(days=7)
@@ -826,7 +827,7 @@ def register(request):
         Client.objects.create(user=user, name=name, email=email, phone=phone)
         login(request, user)
         messages.success(request, f'¡Bienvenido {name}!')
-        return redirect('client_portal')
+        return redirect('control_dashboard')
     return render(request, 'registration/register.html')
 
 
@@ -841,7 +842,7 @@ def client_login(request):
                 user = authenticate(request, username=user_lookup.username, password=password)
         if user is not None:
             login(request, user)
-            return redirect(request.GET.get('next', 'client_portal'))
+            return redirect(request.GET.get('next', 'control_dashboard'))
         else:
             messages.error(request, 'Correo o contraseña incorrectos.')
     return render(request, 'registration/login.html')
@@ -853,95 +854,3 @@ def client_logout(request):
 
 
 # ── Client Portal ────────────────────────────────────────────────────────────
-
-@login_required
-def client_portal(request):
-    try:
-        client = request.user.client
-    except Client.DoesNotExist:
-        messages.error(request, 'No tienes un perfil de cliente asociado.')
-        return redirect('gallery')
-    return render(request, 'client_portal.html', {
-        'client': client,
-        'quotes': Quote.objects.filter(client=client).select_related('product').order_by('-created_at'),
-        'orders': Order.objects.filter(client=client).select_related('product').order_by('-order_date'),
-    })
-
-
-@login_required
-def submit_inquiry(request, product_id):
-    product = get_object_or_404(Product, id=product_id, is_available=True)
-    if request.method == 'POST':
-        try:
-            persons = int(request.POST.get('persons', 0))
-        except (TypeError, ValueError):
-            messages.error(request, 'Número inválido.')
-            return redirect('product_detail', product_id=product.id)
-        if persons < (product.min_persons or 1):
-            messages.error(request, f'Mínimo {product.min_persons or 1} persona(s).')
-            return redirect('product_detail', product_id=product.id)
-        if product.max_persons and persons > product.max_persons:
-            messages.error(request, f'Máximo {product.max_persons} persona(s).')
-            return redirect('product_detail', product_id=product.id)
-        # Resolve client
-        if request.user.is_authenticated:
-            try:
-                client = request.user.client
-            except Client.DoesNotExist:
-                messages.error(request, 'Completa tu registro como cliente primero.')
-                return redirect('register')
-        else:
-            email = request.POST.get('email', '').strip().lower()
-            name = request.POST.get('name', '').strip()
-            phone = request.POST.get('phone', '').strip()
-            if not email:
-                messages.error(request, 'Correo electrónico requerido.')
-                return redirect('product_detail', product_id=product.id)
-            client_qs = Client.objects.filter(email=email)
-            if client_qs.exists():
-                client = client_qs.first()
-            else:
-                client = Client.objects.create(name=name or email, email=email, phone=phone)
-        quote = Quote(client=client, product=product, persons=persons, design_notes=request.POST.get('design_notes', '').strip(), status='draft')
-        quote.recalculate()
-        quote.save()
-        messages.success(request, '¡Cotización solicitada! Te contactaremos pronto.')
-        if request.user.is_authenticated:
-            return redirect('client_portal')
-        return redirect('product_detail', product_id=product.id)
-    return redirect('product_detail', product_id=product.id)
-
-
-@login_required
-def accept_quote(request, quote_id):
-    try:
-        client = request.user.client
-        quote = Quote.objects.get(id=quote_id, client=client)
-    except (Client.DoesNotExist, Quote.DoesNotExist):
-        messages.error(request, 'Cotización no encontrada.')
-        return redirect('client_portal')
-    if quote.status != 'sent':
-        messages.error(request, 'Esta cotización no está disponible.')
-        return redirect('client_portal')
-    quote.status = 'accepted'
-    quote.save(update_fields=['status'])
-    Order.objects.create(client=client, product=quote.product, persons=quote.persons, unit_price=quote.unit_price, design_notes=quote.design_notes, design_surcharge=quote.design_surcharge, labor_cost=quote.labor_cost, total_price=quote.total_price, notes=f"Convertido de Cotización #{quote.pk}")
-    messages.success(request, '¡Cotización aceptada! Pedido creado.')
-    return redirect('client_portal')
-
-
-@login_required
-def reject_quote(request, quote_id):
-    try:
-        client = request.user.client
-        quote = Quote.objects.get(id=quote_id, client=client)
-    except (Client.DoesNotExist, Quote.DoesNotExist):
-        messages.error(request, 'Cotización no encontrada.')
-        return redirect('client_portal')
-    if quote.status != 'sent':
-        messages.error(request, 'Esta cotización no está disponible.')
-        return redirect('client_portal')
-    quote.status = 'rejected'
-    quote.save(update_fields=['status'])
-    messages.info(request, 'Cotización rechazada.')
-    return redirect('client_portal')

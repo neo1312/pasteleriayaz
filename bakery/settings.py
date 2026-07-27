@@ -112,7 +112,7 @@ FORMAT_MODULE_PATH = 'bakery.formats'
 
 
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'client_portal'
+LOGIN_REDIRECT_URL = 'control_dashboard'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

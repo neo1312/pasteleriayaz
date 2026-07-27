@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control - Pastelería Yaz</title>
+    <title>Panel de Control - Pastelería Zaret</title>
     <style>
         * {
             margin: 0;
@@ -333,11 +333,11 @@
 <body>
     <header>
         <div class="header-inner">
-            <h1>🥐 Panel de Control</h1>
+            <h1>Panel de Control</h1>
             <nav>
                 <a href="{% url 'gallery' %}">Tienda</a>
-                <a href="{% url 'admin:index' %}">Admin</a>
-                <a href="{% url 'admin:logout' %}">Salir</a>
+                <a href="{% url 'control_dashboard' %}">Dashboard</a>
+                <a href="{% url 'logout' %}">Cerrar Sesión</a>
             </nav>
         </div>
     </header>
@@ -500,7 +500,7 @@
     </div>
 
     <footer>
-        <p>✨ Sistema de Gestión - Pastelería Yaz ✨</p>
+        <p>Sistema de Gestión - Pastelería Zaret</p>
     </footer>
 </body>
 </html>
