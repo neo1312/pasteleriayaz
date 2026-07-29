@@ -44,6 +44,24 @@ urlpatterns = [
     path('niveles-complejidad/<int:pk>/editar/', views.complexity_tier_edit, name='complexity_tier_edit'),
     path('niveles-complejidad/<int:pk>/eliminar/', views.complexity_tier_delete, name='complexity_tier_delete'),
 
+    # Bases de Pastel
+    path('bases/', views.base_bread_list, name='base_bread_list'),
+    path('bases/nueva/', views.base_bread_create, name='base_bread_create'),
+    path('bases/<int:pk>/editar/', views.base_bread_edit, name='base_bread_edit'),
+    path('bases/<int:pk>/eliminar/', views.base_bread_delete, name='base_bread_delete'),
+
+    # Rellenos
+    path('rellenos/', views.filling_list, name='filling_list'),
+    path('rellenos/nuevo/', views.filling_create, name='filling_create'),
+    path('rellenos/<int:pk>/editar/', views.filling_edit, name='filling_edit'),
+    path('rellenos/<int:pk>/eliminar/', views.filling_delete, name='filling_delete'),
+
+    # Cubiertas
+    path('cubiertas/', views.topping_list, name='topping_list'),
+    path('cubiertas/nueva/', views.topping_create, name='topping_create'),
+    path('cubiertas/<int:pk>/editar/', views.topping_edit, name='topping_edit'),
+    path('cubiertas/<int:pk>/eliminar/', views.topping_delete, name='topping_delete'),
+
     # Compras
     path('compras/', views.purchase_list, name='purchase_list'),
     path('compras/nueva/', views.purchase_create, name='purchase_create'),

@@ -264,6 +264,15 @@
             <a href="{% url 'complexity_tier_list' %}" class="{% if request.resolver_match.url_name == 'complexity_tier_list' %}active{% endif %}">
                 ⚙️ <span>Niveles de Complejidad</span>
             </a>
+            <a href="{% url 'base_bread_list' %}" class="{% if request.resolver_match.url_name == 'base_bread_list' or request.resolver_match.url_name == 'base_bread_create' or request.resolver_match.url_name == 'base_bread_edit' %}active{% endif %}">
+                🍰 <span>Bases de Pastel</span>
+            </a>
+            <a href="{% url 'filling_list' %}" class="{% if request.resolver_match.url_name == 'filling_list' or request.resolver_match.url_name == 'filling_create' or request.resolver_match.url_name == 'filling_edit' %}active{% endif %}">
+                🥫 <span>Rellenos</span>
+            </a>
+            <a href="{% url 'topping_list' %}" class="{% if request.resolver_match.url_name == 'topping_list' or request.resolver_match.url_name == 'topping_create' or request.resolver_match.url_name == 'topping_edit' %}active{% endif %}">
+                🎂 <span>Cubiertas</span>
+            </a>
 
             <div class="nav-section">Inventario</div>
             <a href="{% url 'rawproduct_list' %}" class="{% if request.resolver_match.url_name == 'rawproduct_list' %}active{% endif %}">

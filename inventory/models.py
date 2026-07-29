@@ -55,6 +55,150 @@ class TransportZone(models.Model):
         return f"{self.name} (${self.base_fee} + ${self.fee_per_km}/km)"
 
 
+class BaseBread(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nombre")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
+    is_available = models.BooleanField(default=True, verbose_name="Disponible")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
+
+    def cost_per_portion(self):
+        total = Decimal('0')
+        for ing in self.ingredients.select_related('raw_product'):
+            rp = ing.raw_product
+            unit_cost = rp.average_cost if rp.average_cost else rp.cost_per_unit
+            factor = _conversion_factor(ing.unit, rp.unit)
+            total += ing.quantity * factor * unit_cost
+        return total
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Base de Pastel"
+        verbose_name_plural = "Bases de Pastel"
+
+
+class Filling(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nombre")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
+    is_available = models.BooleanField(default=True, verbose_name="Disponible")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
+
+    def cost_per_portion(self):
+        total = Decimal('0')
+        for ing in self.ingredients.select_related('raw_product'):
+            rp = ing.raw_product
+            unit_cost = rp.average_cost if rp.average_cost else rp.cost_per_unit
+            factor = _conversion_factor(ing.unit, rp.unit)
+            total += ing.quantity * factor * unit_cost
+        return total
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Relleno"
+        verbose_name_plural = "Rellenos"
+
+
+class Topping(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nombre")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
+    is_available = models.BooleanField(default=True, verbose_name="Disponible")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
+
+    def cost_per_portion(self):
+        total = Decimal('0')
+        for ing in self.ingredients.select_related('raw_product'):
+            rp = ing.raw_product
+            unit_cost = rp.average_cost if rp.average_cost else rp.cost_per_unit
+            factor = _conversion_factor(ing.unit, rp.unit)
+            total += ing.quantity * factor * unit_cost
+        return total
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Cubierta"
+        verbose_name_plural = "Cubiertas"
+
+
+class BaseBreadIngredient(models.Model):
+    INGREDIENT_UNIT_CHOICES = [
+        ('g', 'Gramos'),
+        ('mg', 'Miligramos'),
+        ('pcs', 'Piezas'),
+    ]
+
+    base_bread = models.ForeignKey(BaseBread, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Base de pastel")
+    raw_product = models.ForeignKey('RawProduct', on_delete=models.CASCADE, related_name='base_bread_uses', verbose_name="Materia prima")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad necesaria por porción (1 persona)", verbose_name="Cantidad")
+    unit = models.CharField(max_length=5, choices=INGREDIENT_UNIT_CHOICES, default='g', verbose_name="Unidad")
+    notes = models.CharField(max_length=200, blank=True, help_text="Nota opcional, ej. 'tamizado', 'derretido'", verbose_name="Notas")
+
+    def __str__(self):
+        return f"{self.quantity} {self.get_unit_display()} de {self.raw_product.name}"
+
+    class Meta:
+        unique_together = ('base_bread', 'raw_product')
+        verbose_name = "Ingrediente de Base"
+        verbose_name_plural = "Ingredientes de Base"
+
+
+class FillingIngredient(models.Model):
+    INGREDIENT_UNIT_CHOICES = [
+        ('g', 'Gramos'),
+        ('mg', 'Miligramos'),
+        ('pcs', 'Piezas'),
+    ]
+
+    filling = models.ForeignKey(Filling, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Relleno")
+    raw_product = models.ForeignKey('RawProduct', on_delete=models.CASCADE, related_name='filling_uses', verbose_name="Materia prima")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad necesaria por porción (1 persona)", verbose_name="Cantidad")
+    unit = models.CharField(max_length=5, choices=INGREDIENT_UNIT_CHOICES, default='g', verbose_name="Unidad")
+    notes = models.CharField(max_length=200, blank=True, help_text="Nota opcional, ej. 'tamizado', 'derretido'", verbose_name="Notas")
+
+    def __str__(self):
+        return f"{self.quantity} {self.get_unit_display()} de {self.raw_product.name}"
+
+    class Meta:
+        unique_together = ('filling', 'raw_product')
+        verbose_name = "Ingrediente de Relleno"
+        verbose_name_plural = "Ingredientes de Relleno"
+
+
+class ToppingIngredient(models.Model):
+    INGREDIENT_UNIT_CHOICES = [
+        ('g', 'Gramos'),
+        ('mg', 'Miligramos'),
+        ('pcs', 'Piezas'),
+    ]
+
+    topping = models.ForeignKey(Topping, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Cubierta")
+    raw_product = models.ForeignKey('RawProduct', on_delete=models.CASCADE, related_name='topping_uses', verbose_name="Materia prima")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad necesaria por porción (1 persona)", verbose_name="Cantidad")
+    unit = models.CharField(max_length=5, choices=INGREDIENT_UNIT_CHOICES, default='g', verbose_name="Unidad")
+    notes = models.CharField(max_length=200, blank=True, help_text="Nota opcional, ej. 'tamizado', 'derretido'", verbose_name="Notas")
+
+    def __str__(self):
+        return f"{self.quantity} {self.get_unit_display()} de {self.raw_product.name}"
+
+    class Meta:
+        unique_together = ('topping', 'raw_product')
+        verbose_name = "Ingrediente de Cubierta"
+        verbose_name_plural = "Ingredientes de Cubierta"
+
+
 class Product(models.Model):
     CATEGORY_CHOICES = [
         ('bread', 'Pan'),
@@ -89,6 +233,9 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
     is_available = models.BooleanField(default=True, verbose_name="Disponible")
+    base_bread = models.ForeignKey(BaseBread, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Base de pastel")
+    filling = models.ForeignKey(Filling, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Relleno")
+    topping = models.ForeignKey(Topping, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Cubierta")
     complexity_tier = models.ForeignKey(ComplexityTier, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Nivel de complejidad")
     base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
     min_persons = models.PositiveIntegerField(default=1, verbose_name="Personas mínimas")
@@ -96,6 +243,11 @@ class Product(models.Model):
 
     def calculate_cost(self):
         """Return ingredient cost for ONE portion (1 person)."""
+        if self.category == 'cake' and self.base_bread_id:
+            base_cost = self.base_bread.cost_per_portion() if self.base_bread else Decimal('0')
+            filling_cost = self.filling.cost_per_portion() if self.filling else Decimal('0')
+            topping_cost = self.topping.cost_per_portion() if self.topping else Decimal('0')
+            return base_cost + filling_cost + topping_cost
         total = Decimal('0')
         for ing in self.ingredients.select_related('raw_product'):
             rp = ing.raw_product
@@ -107,8 +259,19 @@ class Product(models.Model):
     def calculate_price_for(self, persons):
         """Calculate total price for N persons including ingredients, labor, and design surcharge."""
         persons = Decimal(str(persons))
-        ingredient_cost = self.calculate_cost() * persons
-        labor_cost = (self.base_labor_per_portion or Decimal('0')) * persons
+        if self.category == 'cake' and self.base_bread_id:
+            base_cost = self.base_bread.cost_per_portion() if self.base_bread else Decimal('0')
+            filling_cost = self.filling.cost_per_portion() if self.filling else Decimal('0')
+            topping_cost = self.topping.cost_per_portion() if self.topping else Decimal('0')
+            ingredient_cost = (base_cost + filling_cost + topping_cost) * persons
+
+            base_labor = self.base_bread.base_labor_per_portion if self.base_bread else Decimal('0')
+            filling_labor = self.filling.base_labor_per_portion if self.filling else Decimal('0')
+            topping_labor = self.topping.base_labor_per_portion if self.topping else Decimal('0')
+            labor_cost = (base_labor + filling_labor + topping_labor) * persons
+        else:
+            ingredient_cost = self.calculate_cost() * persons
+            labor_cost = (self.base_labor_per_portion or Decimal('0')) * persons
         base_total = ingredient_cost + labor_cost
         if self.complexity_tier:
             surcharge = base_total * (self.complexity_tier.surcharge_percentage / Decimal('100'))

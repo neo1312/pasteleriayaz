@@ -26,10 +26,10 @@
             <tr>
                 <th>Nombre</th>
                 <th>Categoría</th>
+                <th>Componentes</th>
                 <th>Costo</th>
                 <th>Precio</th>
                 <th>Margen</th>
-                <th>Stock</th>
                 <th>Disponible</th>
                 <th>Acciones</th>
             </tr>
@@ -39,10 +39,18 @@
             <tr>
                 <td><strong>{{ p.name }}</strong></td>
                 <td><span class="badge" style="background:#fae8d6;color:#8b6914;">{{ p.get_category_display }}</span></td>
+                <td style="font-size:0.85em;">
+                    {% if p.category == 'cake' and p.base_bread %}
+                        Base: {{ p.base_bread.name }}<br>
+                        Relleno: {{ p.filling.name|default:'—' }}<br>
+                        Cubierta: {{ p.topping.name|default:'—' }}
+                    {% else %}
+                        <span style="color:#999;">—</span>
+                    {% endif %}
+                </td>
                 <td class="amount">${{ p.cost|floatformat:2 }}</td>
                 <td class="amount">${{ p.price|floatformat:2 }}</td>
                 <td class="amount">{{ p.margin_percentage|floatformat:1 }}%</td>
-                <td class="amount">{{ p.quantity_in_stock }}</td>
                 <td>{% if p.is_available %}✅{% else %}❌{% endif %}</td>
                 <td class="actions">
                     <a href="{% url 'product_edit' p.id %}" class="btn btn-sm btn-primary">Editar</a>

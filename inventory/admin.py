@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django import forms
 from django.shortcuts import render
 from django.utils.formats import number_format
-from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone
+from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient
 
 
 class IngredientInline(admin.TabularInline):
@@ -19,13 +19,17 @@ class IngredientInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'cost', 'price', 'margin_percentage', 'quantity_in_stock', 'is_available')
+    list_display = ('name', 'category', 'cost', 'price', 'margin_percentage', 'is_available')
     list_filter = ('category', 'complexity_tier', 'is_available', 'created_at')
     search_fields = ('name', 'description')
     readonly_fields = ('cost',)
     inlines = [IngredientInline]
     fieldsets = (
         ('Información Básica', {'fields': ('name', 'category', 'description', 'short_description', 'image')}),
+        ('Componentes (Pastel)', {
+            'description': 'Solo para productos categoría "Pastel". Selecciona base, relleno y cubierta.',
+            'fields': ('base_bread', 'filling', 'topping'),
+        }),
         ('Precios', {
             'description': (
                 'Selecciona un modo: ingresa el Precio o el Margen — '
@@ -36,7 +40,6 @@ class ProductAdmin(admin.ModelAdmin):
         ('Raciones', {
             'fields': ('complexity_tier', 'base_labor_per_portion', 'min_persons', 'max_persons'),
         }),
-        ('Stock', {'fields': ('quantity_in_stock', 'reorder_level')}),
         ('Estado', {'fields': ('is_available',)}),
     )
 
@@ -362,5 +365,77 @@ class ComplexityTierAdmin(admin.ModelAdmin):
 class TransportZoneAdmin(admin.ModelAdmin):
     list_display = ("name", "radius_km", "base_fee", "fee_per_km")
     search_fields = ("name",)
+
+
+# ── Base Bread ─────────────────────────────────────────────────────────────────
+
+
+class BaseBreadIngredientInline(admin.TabularInline):
+    model = BaseBreadIngredient
+    extra = 1
+    fields = ('raw_product', 'quantity', 'unit', 'notes')
+    verbose_name = "Ingrediente"
+    verbose_name_plural = "Ingredientes"
+
+
+@admin.register(BaseBread)
+class BaseBreadAdmin(admin.ModelAdmin):
+    list_display = ('name', 'base_labor_per_portion', 'is_available')
+    list_filter = ('is_available',)
+    search_fields = ('name', 'description')
+    inlines = [BaseBreadIngredientInline]
+    fieldsets = (
+        ('Información Básica', {'fields': ('name', 'description')}),
+        ('Costos', {'fields': ('base_labor_per_portion',)}),
+        ('Estado', {'fields': ('is_available',)}),
+    )
+
+
+# ── Filling ────────────────────────────────────────────────────────────────────
+
+
+class FillingIngredientInline(admin.TabularInline):
+    model = FillingIngredient
+    extra = 1
+    fields = ('raw_product', 'quantity', 'unit', 'notes')
+    verbose_name = "Ingrediente"
+    verbose_name_plural = "Ingredientes"
+
+
+@admin.register(Filling)
+class FillingAdmin(admin.ModelAdmin):
+    list_display = ('name', 'base_labor_per_portion', 'is_available')
+    list_filter = ('is_available',)
+    search_fields = ('name', 'description')
+    inlines = [FillingIngredientInline]
+    fieldsets = (
+        ('Información Básica', {'fields': ('name', 'description')}),
+        ('Costos', {'fields': ('base_labor_per_portion',)}),
+        ('Estado', {'fields': ('is_available',)}),
+    )
+
+
+# ── Topping ────────────────────────────────────────────────────────────────────
+
+
+class ToppingIngredientInline(admin.TabularInline):
+    model = ToppingIngredient
+    extra = 1
+    fields = ('raw_product', 'quantity', 'unit', 'notes')
+    verbose_name = "Ingrediente"
+    verbose_name_plural = "Ingredientes"
+
+
+@admin.register(Topping)
+class ToppingAdmin(admin.ModelAdmin):
+    list_display = ('name', 'base_labor_per_portion', 'is_available')
+    list_filter = ('is_available',)
+    search_fields = ('name', 'description')
+    inlines = [ToppingIngredientInline]
+    fieldsets = (
+        ('Información Básica', {'fields': ('name', 'description')}),
+        ('Costos', {'fields': ('base_labor_per_portion',)}),
+        ('Estado', {'fields': ('is_available',)}),
+    )
 
 

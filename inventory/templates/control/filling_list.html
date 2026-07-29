@@ -1,0 +1,38 @@
+{% extends 'control/base.html' %}
+{% block title %}Rellenos - Pastelería Yaz{% endblock %}
+{% block page_title %}🥫 Rellenos{% endblock %}
+{% block header_actions %}
+<a href="{% url 'filling_create' %}" class="btn btn-primary">+ Nuevo</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="get" class="search-bar" style="margin-bottom:0;">
+        <input type="text" name="search" placeholder="Buscar..." value="{{ search }}">
+        <button type="submit" class="btn btn-outline">Buscar</button>
+    </form>
+</div>
+<div class="card">
+    {% if fillings %}
+    <table>
+        <thead><tr><th>Nombre</th><th>Descripción</th><th>Mano de obra x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
+        <tbody>
+            {% for f in fillings %}
+            <tr>
+                <td><strong>{{ f.name }}</strong></td>
+                <td>{{ f.description|default:'—'|truncatechars:60 }}</td>
+                <td class="amount">${{ f.base_labor_per_portion|floatformat:2 }}</td>
+                <td>{% if f.is_available %}✅{% else %}❌{% endif %}</td>
+                <td class="actions">
+                    <a href="{% url 'filling_edit' f.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'filling_delete' f.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar {{ f.name }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">🥫</div><h3>No hay rellenos</h3></div>
+    {% endif %}
+</div>
+{% endblock %}

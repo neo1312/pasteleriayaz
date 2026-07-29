@@ -1,0 +1,32 @@
+{% extends 'control/base.html' %}
+{% block title %}{% if object.pk %}Editar{% else %}Nueva{% endif %} Cubierta - Pastelería Yaz{% endblock %}
+{% block page_title %}{% if object.pk %}✏️ Editar{% else %}➕ Nueva{% endif %} Cubierta{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre</label>
+            <input type="text" name="name" value="{{ object.name|default:'' }}" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción</label>
+            <textarea name="description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:80px;">{{ object.description|default:'' }}</textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Mano de obra por porción</label>
+            <input type="number" name="base_labor_per_portion" value="{{ object.base_labor_per_portion|default:'0' }}" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                <input type="checkbox" name="is_available" {% if object.is_available|default:True %}checked{% endif %}> Disponible
+            </label>
+        </div>
+        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
+            <button type="submit" class="btn btn-success">💾 Guardar</button>
+            <a href="{% url 'topping_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

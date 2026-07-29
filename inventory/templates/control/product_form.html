@@ -24,23 +24,45 @@
             <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción</label>
             <textarea name="description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:80px;">{{ form.description.value|default:'' }}</textarea>
         </div>
-        <div class="grid-3">
+        <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
+            <h4 style="margin-bottom:12px;color:#3d2817;">🍰 Componentes (solo para pasteles)</h4>
+            <div class="grid-3">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Base</label>
+                    <select name="base_bread" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Sin base —</option>
+                        {% for b in breads %}
+                        <option value="{{ b.id }}" {% if object.base_bread.id == b.id %}selected{% endif %}>{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Relleno</label>
+                    <select name="filling" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Sin relleno —</option>
+                        {% for f in fillings %}
+                        <option value="{{ f.id }}" {% if object.filling.id == f.id %}selected{% endif %}>{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Cubierta</label>
+                    <select name="topping" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Sin cubierta —</option>
+                        {% for t in toppings %}
+                        <option value="{{ t.id }}" {% if object.topping.id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="grid-2">
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Precio</label>
                 <input type="number" name="price" value="{{ form.price.value|default:'0' }}" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
             </div>
             <div class="form-group" style="margin-bottom:16px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Stock</label>
-                <input type="number" name="quantity_in_stock" value="{{ form.quantity_in_stock.value|default:'0' }}" step="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
-            </div>
-            <div class="form-group" style="margin-bottom:16px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Reorden</label>
-                <input type="number" name="reorder_level" value="{{ form.reorder_level.value|default:'10' }}" step="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
-            </div>
-        </div>
-        <div class="grid-2">
-            <div class="form-group" style="margin-bottom:16px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Complejidad</label>
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Complejidad (diseño)</label>
                 <select name="complexity_tier" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
                     <option value="">— Sin complejidad —</option>
                     {% for t in tiers %}
@@ -48,12 +70,12 @@
                     {% endfor %}
                 </select>
             </div>
+        </div>
+        <div class="grid-3">
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Mano de obra x porción</label>
                 <input type="number" name="base_labor_per_portion" value="{{ form.base_labor_per_portion.value|default:'0' }}" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
             </div>
-        </div>
-        <div class="grid-2">
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas mín.</label>
                 <input type="number" name="min_persons" value="{{ form.min_persons.value|default:'1' }}" min="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">

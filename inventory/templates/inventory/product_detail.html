@@ -189,6 +189,20 @@
                 {% if price_info %}
                 <div class="price-breakdown">
                     <h3>💰 Precio por persona</h3>
+                    {% if product.category == 'cake' and product.base_bread %}
+                    <div class="price-row" style="font-size:0.85em;color:#999;">
+                        <span>🍰 {{ product.base_bread.name }}</span>
+                        <span></span>
+                    </div>
+                    <div class="price-row" style="font-size:0.85em;color:#999;">
+                        <span>🥫 {{ product.filling.name|default:'—' }}</span>
+                        <span></span>
+                    </div>
+                    <div class="price-row" style="font-size:0.85em;color:#999;">
+                        <span>🎂 {{ product.topping.name|default:'—' }}</span>
+                        <span></span>
+                    </div>
+                    {% endif %}
                     <div class="price-row">
                         <span>Ingredientes</span>
                         <span>${{ price_info.ingredient_cost|floatformat:2 }}</span>

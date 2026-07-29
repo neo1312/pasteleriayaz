@@ -8,7 +8,7 @@ from django.db.models import Sum, Count, Q, F
 from decimal import Decimal
 from datetime import datetime, timedelta
 import json
-from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider
+from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping
 
 
 def product_gallery(request):
@@ -198,20 +198,27 @@ def product_list(request):
 @login_required
 def product_create(request):
     tiers = ComplexityTier.objects.all()
+    breads = BaseBread.objects.filter(is_available=True)
+    fillings = Filling.objects.filter(is_available=True)
+    toppings = Topping.objects.filter(is_available=True)
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         if not name:
             messages.error(request, 'El nombre es obligatorio.')
-            return render(request, 'control/product_form.html', {'form': request.POST, 'tiers': tiers})
+            return render(request, 'control/product_form.html', {'form': request.POST, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings})
         product = Product(
             name=name,
             category=request.POST.get('category', 'other'),
             description=request.POST.get('description', ''),
             price=Decimal(request.POST.get('price', '0')),
-            quantity_in_stock=Decimal(request.POST.get('quantity_in_stock', '0')),
-            reorder_level=Decimal(request.POST.get('reorder_level', '10')),
             is_available=request.POST.get('is_available') == 'on',
         )
+        if request.POST.get('base_bread'):
+            product.base_bread_id = int(request.POST['base_bread'])
+        if request.POST.get('filling'):
+            product.filling_id = int(request.POST['filling'])
+        if request.POST.get('topping'):
+            product.topping_id = int(request.POST['topping'])
         if request.POST.get('complexity_tier'):
             product.complexity_tier_id = int(request.POST['complexity_tier'])
         if request.POST.get('base_labor_per_portion'):
@@ -223,20 +230,24 @@ def product_create(request):
         product.save()
         messages.success(request, f'Producto "{product.name}" creado.')
         return redirect('product_list')
-    return render(request, 'control/product_form.html', {'tiers': tiers})
+    return render(request, 'control/product_form.html', {'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings})
 
 
 @login_required
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk)
     tiers = ComplexityTier.objects.all()
+    breads = BaseBread.objects.filter(is_available=True)
+    fillings = Filling.objects.filter(is_available=True)
+    toppings = Topping.objects.filter(is_available=True)
     if request.method == 'POST':
         product.name = request.POST.get('name', product.name)
         product.category = request.POST.get('category', product.category)
         product.description = request.POST.get('description', product.description)
         product.price = Decimal(request.POST.get('price', '0'))
-        product.quantity_in_stock = Decimal(request.POST.get('quantity_in_stock', '0'))
-        product.reorder_level = Decimal(request.POST.get('reorder_level', '10'))
+        product.base_bread_id = request.POST.get('base_bread') or None
+        product.filling_id = request.POST.get('filling') or None
+        product.topping_id = request.POST.get('topping') or None
         product.complexity_tier_id = request.POST.get('complexity_tier') or None
         product.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
         product.min_persons = int(request.POST.get('min_persons', '1'))
@@ -245,7 +256,7 @@ def product_edit(request, pk):
         product.save()
         messages.success(request, f'Producto "{product.name}" actualizado.')
         return redirect('product_list')
-    return render(request, 'control/product_form.html', {'form': product, 'object': product, 'tiers': tiers})
+    return render(request, 'control/product_form.html', {'form': product, 'object': product, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings})
 
 
 @login_required
@@ -517,6 +528,156 @@ def complexity_tier_delete(request, pk):
         messages.success(request, 'Nivel de complejidad eliminado.')
         return redirect('complexity_tier_list')
     return render(request, 'control/confirm_delete.html', {'object': t, 'cancel_url': 'complexity_tier_list'})
+
+
+# ── BaseBread CRUD ───────────────────────────────────────────────────────────
+
+@login_required
+def base_bread_list(request):
+    breads = BaseBread.objects.order_by('name')
+    search = request.GET.get('search', '')
+    if search:
+        breads = breads.filter(name__icontains=search)
+    return render(request, 'control/basebread_list.html', {'breads': breads, 'search': search})
+
+
+@login_required
+def base_bread_create(request):
+    if request.method == 'POST':
+        b = BaseBread(
+            name=request.POST.get('name', '').strip(),
+            description=request.POST.get('description', '').strip(),
+            base_labor_per_portion=Decimal(request.POST.get('base_labor_per_portion', '0')),
+            is_available=request.POST.get('is_available') == 'on',
+        )
+        b.save()
+        messages.success(request, f'Base "{b.name}" creada.')
+        return redirect('base_bread_list')
+    return render(request, 'control/basebread_form.html')
+
+
+@login_required
+def base_bread_edit(request, pk):
+    b = get_object_or_404(BaseBread, pk=pk)
+    if request.method == 'POST':
+        b.name = request.POST.get('name', b.name)
+        b.description = request.POST.get('description', b.description)
+        b.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
+        b.is_available = request.POST.get('is_available') == 'on'
+        b.save()
+        messages.success(request, f'Base "{b.name}" actualizada.')
+        return redirect('base_bread_list')
+    return render(request, 'control/basebread_form.html', {'object': b})
+
+
+@login_required
+def base_bread_delete(request, pk):
+    b = get_object_or_404(BaseBread, pk=pk)
+    if request.method == 'POST':
+        b.delete()
+        messages.success(request, 'Base eliminada.')
+        return redirect('base_bread_list')
+    return render(request, 'control/confirm_delete.html', {'object': b, 'cancel_url': 'base_bread_list'})
+
+
+# ── Filling CRUD ─────────────────────────────────────────────────────────────
+
+@login_required
+def filling_list(request):
+    fillings = Filling.objects.order_by('name')
+    search = request.GET.get('search', '')
+    if search:
+        fillings = fillings.filter(name__icontains=search)
+    return render(request, 'control/filling_list.html', {'fillings': fillings, 'search': search})
+
+
+@login_required
+def filling_create(request):
+    if request.method == 'POST':
+        f = Filling(
+            name=request.POST.get('name', '').strip(),
+            description=request.POST.get('description', '').strip(),
+            base_labor_per_portion=Decimal(request.POST.get('base_labor_per_portion', '0')),
+            is_available=request.POST.get('is_available') == 'on',
+        )
+        f.save()
+        messages.success(request, f'Relleno "{f.name}" creado.')
+        return redirect('filling_list')
+    return render(request, 'control/filling_form.html')
+
+
+@login_required
+def filling_edit(request, pk):
+    f = get_object_or_404(Filling, pk=pk)
+    if request.method == 'POST':
+        f.name = request.POST.get('name', f.name)
+        f.description = request.POST.get('description', f.description)
+        f.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
+        f.is_available = request.POST.get('is_available') == 'on'
+        f.save()
+        messages.success(request, f'Relleno "{f.name}" actualizado.')
+        return redirect('filling_list')
+    return render(request, 'control/filling_form.html', {'object': f})
+
+
+@login_required
+def filling_delete(request, pk):
+    f = get_object_or_404(Filling, pk=pk)
+    if request.method == 'POST':
+        f.delete()
+        messages.success(request, 'Relleno eliminado.')
+        return redirect('filling_list')
+    return render(request, 'control/confirm_delete.html', {'object': f, 'cancel_url': 'filling_list'})
+
+
+# ── Topping CRUD ─────────────────────────────────────────────────────────────
+
+@login_required
+def topping_list(request):
+    toppings = Topping.objects.order_by('name')
+    search = request.GET.get('search', '')
+    if search:
+        toppings = toppings.filter(name__icontains=search)
+    return render(request, 'control/topping_list.html', {'toppings': toppings, 'search': search})
+
+
+@login_required
+def topping_create(request):
+    if request.method == 'POST':
+        t = Topping(
+            name=request.POST.get('name', '').strip(),
+            description=request.POST.get('description', '').strip(),
+            base_labor_per_portion=Decimal(request.POST.get('base_labor_per_portion', '0')),
+            is_available=request.POST.get('is_available') == 'on',
+        )
+        t.save()
+        messages.success(request, f'Cubierta "{t.name}" creada.')
+        return redirect('topping_list')
+    return render(request, 'control/topping_form.html')
+
+
+@login_required
+def topping_edit(request, pk):
+    t = get_object_or_404(Topping, pk=pk)
+    if request.method == 'POST':
+        t.name = request.POST.get('name', t.name)
+        t.description = request.POST.get('description', t.description)
+        t.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
+        t.is_available = request.POST.get('is_available') == 'on'
+        t.save()
+        messages.success(request, f'Cubierta "{t.name}" actualizada.')
+        return redirect('topping_list')
+    return render(request, 'control/topping_form.html', {'object': t})
+
+
+@login_required
+def topping_delete(request, pk):
+    t = get_object_or_404(Topping, pk=pk)
+    if request.method == 'POST':
+        t.delete()
+        messages.success(request, 'Cubierta eliminada.')
+        return redirect('topping_list')
+    return render(request, 'control/confirm_delete.html', {'object': t, 'cancel_url': 'topping_list'})
 
 
 # ── Purchases CRUD ───────────────────────────────────────────────────────────

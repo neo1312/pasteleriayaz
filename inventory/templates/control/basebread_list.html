@@ -1,0 +1,38 @@
+{% extends 'control/base.html' %}
+{% block title %}Bases de Pastel - Pastelería Yaz{% endblock %}
+{% block page_title %}🍰 Bases de Pastel{% endblock %}
+{% block header_actions %}
+<a href="{% url 'base_bread_create' %}" class="btn btn-primary">+ Nueva</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="get" class="search-bar" style="margin-bottom:0;">
+        <input type="text" name="search" placeholder="Buscar..." value="{{ search }}">
+        <button type="submit" class="btn btn-outline">Buscar</button>
+    </form>
+</div>
+<div class="card">
+    {% if breads %}
+    <table>
+        <thead><tr><th>Nombre</th><th>Descripción</th><th>Mano de obra x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
+        <tbody>
+            {% for b in breads %}
+            <tr>
+                <td><strong>{{ b.name }}</strong></td>
+                <td>{{ b.description|default:'—'|truncatechars:60 }}</td>
+                <td class="amount">${{ b.base_labor_per_portion|floatformat:2 }}</td>
+                <td>{% if b.is_available %}✅{% else %}❌{% endif %}</td>
+                <td class="actions">
+                    <a href="{% url 'base_bread_edit' b.id %}" class="btn btn-sm btn-primary">Editar</a>
+                    <a href="{% url 'base_bread_delete' b.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar {{ b.name }}?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="icon">🍰</div><h3>No hay bases de pastel</h3></div>
+    {% endif %}
+</div>
+{% endblock %}
