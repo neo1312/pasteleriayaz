@@ -273,6 +273,9 @@
             <a href="{% url 'topping_list' %}" class="{% if request.resolver_match.url_name == 'topping_list' or request.resolver_match.url_name == 'topping_create' or request.resolver_match.url_name == 'topping_edit' %}active{% endif %}">
                 🎂 <span>Cubiertas</span>
             </a>
+            <a href="{% url 'brand_list' %}" class="{% if request.resolver_match.url_name == 'brand_list' or request.resolver_match.url_name == 'brand_create' or request.resolver_match.url_name == 'brand_edit' %}active{% endif %}">
+                🏷️ <span>Marcas</span>
+            </a>
 
             <div class="nav-section">Inventario</div>
             <a href="{% url 'rawproduct_list' %}" class="{% if request.resolver_match.url_name == 'rawproduct_list' %}active{% endif %}">

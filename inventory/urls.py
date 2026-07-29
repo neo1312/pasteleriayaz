@@ -62,6 +62,12 @@ urlpatterns = [
     path('cubiertas/<int:pk>/editar/', views.topping_edit, name='topping_edit'),
     path('cubiertas/<int:pk>/eliminar/', views.topping_delete, name='topping_delete'),
 
+    # Marcas
+    path('marcas/', views.brand_list, name='brand_list'),
+    path('marcas/nueva/', views.brand_create, name='brand_create'),
+    path('marcas/<int:pk>/editar/', views.brand_edit, name='brand_edit'),
+    path('marcas/<int:pk>/eliminar/', views.brand_delete, name='brand_delete'),
+
     # Compras
     path('compras/', views.purchase_list, name='purchase_list'),
     path('compras/nueva/', views.purchase_create, name='purchase_create'),

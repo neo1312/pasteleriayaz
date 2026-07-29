@@ -199,6 +199,21 @@ class ToppingIngredient(models.Model):
         verbose_name_plural = "Ingredientes de Cubierta"
 
 
+class Brand(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nombre")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Marca"
+        verbose_name_plural = "Marcas"
+
+
 class Product(models.Model):
     CATEGORY_CHOICES = [
         ('bread', 'Pan'),
@@ -236,6 +251,7 @@ class Product(models.Model):
     base_bread = models.ForeignKey(BaseBread, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Base de pastel")
     filling = models.ForeignKey(Filling, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Relleno")
     topping = models.ForeignKey(Topping, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Cubierta")
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Marca")
     complexity_tier = models.ForeignKey(ComplexityTier, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Nivel de complejidad")
     base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
     min_persons = models.PositiveIntegerField(default=1, verbose_name="Personas mínimas")

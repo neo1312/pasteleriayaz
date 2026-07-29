@@ -1,0 +1,23 @@
+{% extends 'control/base.html' %}
+{% block title %}{% if object.pk %}Editar{% else %}Nueva{% endif %} Marca - Pastelería Yaz{% endblock %}
+{% block page_title %}{% if object.pk %}✏️ Editar{% else %}➕ Nueva{% endif %} Marca{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre</label>
+            <input type="text" name="name" value="{{ object.name|default:'' }}" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción</label>
+            <textarea name="description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:80px;">{{ object.description|default:'' }}</textarea>
+        </div>
+        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
+            <button type="submit" class="btn btn-success">💾 Guardar</button>
+            <a href="{% url 'brand_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django import forms
 from django.shortcuts import render
 from django.utils.formats import number_format
-from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient
+from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient, Brand
 
 
 class IngredientInline(admin.TabularInline):
@@ -19,13 +19,13 @@ class IngredientInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'cost', 'price', 'margin_percentage', 'is_available')
-    list_filter = ('category', 'complexity_tier', 'is_available', 'created_at')
+    list_display = ('name', 'category', 'brand', 'cost', 'price', 'margin_percentage', 'is_available')
+    list_filter = ('category', 'brand', 'complexity_tier', 'is_available', 'created_at')
     search_fields = ('name', 'description')
     readonly_fields = ('cost',)
     inlines = [IngredientInline]
     fieldsets = (
-        ('Información Básica', {'fields': ('name', 'category', 'description', 'short_description', 'image')}),
+        ('Información Básica', {'fields': ('name', 'category', 'brand', 'description', 'short_description', 'image')}),
         ('Componentes (Pastel)', {
             'description': 'Solo para productos categoría "Pastel". Selecciona base, relleno y cubierta.',
             'fields': ('base_bread', 'filling', 'topping'),
@@ -359,6 +359,15 @@ class ProviderCatalogAdmin(admin.ModelAdmin):
 class ComplexityTierAdmin(admin.ModelAdmin):
     list_display = ("name", "surcharge_percentage")
     search_fields = ("name",)
+
+
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name', 'description')
+    fieldsets = (
+        ('Información', {'fields': ('name', 'description')}),
+    )
 
 
 @admin.register(TransportZone)

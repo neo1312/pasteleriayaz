@@ -8,7 +8,7 @@ from django.db.models import Sum, Count, Q, F
 from decimal import Decimal
 from datetime import datetime, timedelta
 import json
-from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping
+from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand
 
 
 def product_gallery(request):
@@ -201,11 +201,12 @@ def product_create(request):
     breads = BaseBread.objects.filter(is_available=True)
     fillings = Filling.objects.filter(is_available=True)
     toppings = Topping.objects.filter(is_available=True)
+    brands = Brand.objects.order_by('name')
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         if not name:
             messages.error(request, 'El nombre es obligatorio.')
-            return render(request, 'control/product_form.html', {'form': request.POST, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings})
+            return render(request, 'control/product_form.html', {'form': request.POST, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands})
         product = Product(
             name=name,
             category=request.POST.get('category', 'other'),
@@ -219,6 +220,8 @@ def product_create(request):
             product.filling_id = int(request.POST['filling'])
         if request.POST.get('topping'):
             product.topping_id = int(request.POST['topping'])
+        if request.POST.get('brand'):
+            product.brand_id = int(request.POST['brand'])
         if request.POST.get('complexity_tier'):
             product.complexity_tier_id = int(request.POST['complexity_tier'])
         if request.POST.get('base_labor_per_portion'):
@@ -230,7 +233,7 @@ def product_create(request):
         product.save()
         messages.success(request, f'Producto "{product.name}" creado.')
         return redirect('product_list')
-    return render(request, 'control/product_form.html', {'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings})
+    return render(request, 'control/product_form.html', {'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands})
 
 
 @login_required
@@ -240,6 +243,7 @@ def product_edit(request, pk):
     breads = BaseBread.objects.filter(is_available=True)
     fillings = Filling.objects.filter(is_available=True)
     toppings = Topping.objects.filter(is_available=True)
+    brands = Brand.objects.order_by('name')
     if request.method == 'POST':
         product.name = request.POST.get('name', product.name)
         product.category = request.POST.get('category', product.category)
@@ -248,6 +252,7 @@ def product_edit(request, pk):
         product.base_bread_id = request.POST.get('base_bread') or None
         product.filling_id = request.POST.get('filling') or None
         product.topping_id = request.POST.get('topping') or None
+        product.brand_id = request.POST.get('brand') or None
         product.complexity_tier_id = request.POST.get('complexity_tier') or None
         product.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
         product.min_persons = int(request.POST.get('min_persons', '1'))
@@ -256,7 +261,7 @@ def product_edit(request, pk):
         product.save()
         messages.success(request, f'Producto "{product.name}" actualizado.')
         return redirect('product_list')
-    return render(request, 'control/product_form.html', {'form': product, 'object': product, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings})
+    return render(request, 'control/product_form.html', {'form': product, 'object': product, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands})
 
 
 @login_required
@@ -678,6 +683,52 @@ def topping_delete(request, pk):
         messages.success(request, 'Cubierta eliminada.')
         return redirect('topping_list')
     return render(request, 'control/confirm_delete.html', {'object': t, 'cancel_url': 'topping_list'})
+
+
+# ── Brand CRUD ───────────────────────────────────────────────────────────────
+
+@login_required
+def brand_list(request):
+    brands = Brand.objects.order_by('name')
+    search = request.GET.get('search', '')
+    if search:
+        brands = brands.filter(name__icontains=search)
+    return render(request, 'control/brand_list.html', {'brands': brands, 'search': search})
+
+
+@login_required
+def brand_create(request):
+    if request.method == 'POST':
+        b = Brand(
+            name=request.POST.get('name', '').strip(),
+            description=request.POST.get('description', '').strip(),
+        )
+        b.save()
+        messages.success(request, f'Marca "{b.name}" creada.')
+        return redirect('brand_list')
+    return render(request, 'control/brand_form.html')
+
+
+@login_required
+def brand_edit(request, pk):
+    b = get_object_or_404(Brand, pk=pk)
+    if request.method == 'POST':
+        b.name = request.POST.get('name', b.name)
+        b.description = request.POST.get('description', b.description)
+        b.save()
+        messages.success(request, f'Marca "{b.name}" actualizada.')
+        return redirect('brand_list')
+    return render(request, 'control/brand_form.html', {'object': b})
+
+
+@login_required
+def brand_delete(request, pk):
+    b = get_object_or_404(Brand, pk=pk)
+    if request.method == 'POST':
+        b.delete()
+        messages.success(request, 'Marca eliminada.')
+        return redirect('brand_list')
+    return render(request, 'control/confirm_delete.html', {'object': b, 'cancel_url': 'brand_list'})
 
 
 # ── Purchases CRUD ───────────────────────────────────────────────────────────
