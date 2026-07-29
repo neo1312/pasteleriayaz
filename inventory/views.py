@@ -381,17 +381,19 @@ def rawproduct_list(request):
     materials = RawProduct.objects.select_related('provider').order_by('name')
     search = request.GET.get('search', '')
     if search:
-        materials = materials.filter(Q(name__icontains=search) | Q(brand__icontains=search))
+        materials = materials.filter(Q(name__icontains=search) | Q(old_brand__icontains=search) | Q(brand__name__icontains=search))
     return render(request, 'control/rawproduct_list.html', {'materials': materials, 'search': search})
 
 
 @login_required
 def rawproduct_create(request):
     providers = Provider.objects.order_by('name')
+    brands = Brand.objects.order_by('name')
     if request.method == 'POST':
         rp = RawProduct(
             name=request.POST.get('name', '').strip(),
-            brand=request.POST.get('brand', '').strip(),
+            brand_id=request.POST.get('brand') or None,
+            old_brand=request.POST.get('old_brand', '').strip(),
             unit=request.POST.get('unit', 'kg'),
             cost_per_unit=Decimal(request.POST.get('cost_per_unit', '0')),
             quantity_in_stock=Decimal(request.POST.get('quantity_in_stock', '0')),
@@ -403,6 +405,7 @@ def rawproduct_create(request):
         return redirect('rawproduct_list')
     return render(request, 'control/rawproduct_form.html', {
         'providers': providers,
+        'brands': brands,
         'units': RawProduct.UNIT_CHOICES,
     })
 
@@ -411,9 +414,11 @@ def rawproduct_create(request):
 def rawproduct_edit(request, pk):
     rp = get_object_or_404(RawProduct, pk=pk)
     providers = Provider.objects.order_by('name')
+    brands = Brand.objects.order_by('name')
     if request.method == 'POST':
         rp.name = request.POST.get('name', rp.name)
-        rp.brand = request.POST.get('brand', rp.brand)
+        rp.brand_id = request.POST.get('brand') or None
+        rp.old_brand = request.POST.get('old_brand', '').strip()
         rp.unit = request.POST.get('unit', rp.unit)
         rp.cost_per_unit = Decimal(request.POST.get('cost_per_unit', '0'))
         rp.quantity_in_stock = Decimal(request.POST.get('quantity_in_stock', '0'))
@@ -422,7 +427,12 @@ def rawproduct_edit(request, pk):
         rp.save()
         messages.success(request, f'Insumo "{rp.name}" actualizado.')
         return redirect('rawproduct_list')
-    return render(request, 'control/rawproduct_form.html', {'object': rp, 'providers': providers, 'units': RawProduct.UNIT_CHOICES})
+    return render(request, 'control/rawproduct_form.html', {
+        'object': rp,
+        'providers': providers,
+        'brands': brands,
+        'units': RawProduct.UNIT_CHOICES,
+    })
 
 
 @login_required
@@ -914,7 +924,7 @@ def raw_materials_report(request):
         is_low_stock = material.quantity_in_stock < material.reorder_level if material.quantity_in_stock else True
         if is_low_stock:
             low_stock_count += 1
-        materials_data.append({'id': material.id, 'name': material.name, 'brand': material.brand, 'provider': material.provider.name if material.provider else 'Sin proveedor', 'unit': material.unit, 'quantity': material.quantity_in_stock or 0, 'cost': material.cost_per_unit or Decimal('0'), 'value': value, 'reorder_level': material.reorder_level, 'is_low_stock': is_low_stock})
+        materials_data.append({'id': material.id, 'name': material.name, 'brand': material.brand.name if material.brand else material.old_brand, 'provider': material.provider.name if material.provider else 'Sin proveedor', 'unit': material.unit, 'quantity': material.quantity_in_stock or 0, 'cost': material.cost_per_unit or Decimal('0'), 'value': value, 'reorder_level': material.reorder_level, 'is_low_stock': is_low_stock})
     return render(request, 'control/reports/raw_materials.html', {'materials': materials_data, 'total_value': total_value, 'low_stock_count': low_stock_count, 'providers': Provider.objects.all().order_by('name'), 'selected_provider': provider})
 
 
@@ -953,7 +963,7 @@ def profits_report(request):
 
 @login_required
 def price_compare(request):
-    raw_products = RawProduct.objects.order_by('name', 'brand')
+    raw_products = RawProduct.objects.order_by('name', 'brand__name', 'old_brand')
     selected_id = request.GET.get('raw_product')
     entries = []
     selected_rp = None

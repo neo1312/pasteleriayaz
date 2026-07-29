@@ -424,7 +424,8 @@ class RawProduct(models.Model):
     ]
 
     name = models.CharField(max_length=200, verbose_name="Nombre")
-    brand = models.CharField(max_length=200, blank=True, help_text="Marca o fabricante", verbose_name="Marca")
+    old_brand = models.CharField(max_length=200, blank=True, default='', verbose_name="Marca (anterior)")
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Marca")
     description = models.TextField(blank=True, verbose_name="Descripción")
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg', verbose_name="Unidad")
     cost_per_unit = models.DecimalField(max_digits=10, decimal_places=6, verbose_name="Último costo", help_text="Costo de la compra más reciente", default=0)
@@ -436,11 +437,11 @@ class RawProduct(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
 
     def __str__(self):
-        brand_str = f" [{self.brand}]" if self.brand else ""
+        brand_str = f" [{self.brand.name}]" if self.brand else (f" [{self.old_brand}]" if self.old_brand else "")
         return f"{self.name}{brand_str} ({self.quantity_in_stock} {self.unit})"
 
     class Meta:
-        ordering = ['name', 'brand']
+        ordering = ['name', 'brand__name', 'old_brand']
         verbose_name = "Materia Prima"
         verbose_name_plural = "Materias Primas"
 
