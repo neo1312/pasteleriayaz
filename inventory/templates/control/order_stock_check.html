@@ -1,0 +1,52 @@
+{% extends 'control/base.html' %}
+{% block title %}Verificar Stock - Pedido #{{ order.id }}{% endblock %}
+{% block page_title %}🔍 Verificar Stock — Pedido #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3 style="margin-bottom:15px;">{{ order.product.name }} × {{ order.persons }} personas</h3>
+    <p style="color:#555;margin-bottom:20px;">Cliente: {{ order.client.name }} · Fecha: {{ order.order_date|date:"d/m/Y" }}</p>
+
+    {% if has_shortages %}
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px;margin-bottom:20px;">
+        <h4 style="color:#856404;margin-bottom:8px;">⚠️ Insumos insuficientes</h4>
+        <p style="color:#856404;font-size:0.95em;">Los siguientes insumos no tienen suficiente stock:</p>
+    </div>
+    <table>
+        <thead><tr><th>Insumo</th><th>Necesario</th><th>Disponible</th><th>Faltante</th></tr></thead>
+        <tbody>
+            {% for s in shortages %}
+            <tr>
+                <td>{{ s.name }}</td>
+                <td class="amount">{{ s.needed|floatformat:2 }} {{ s.unit }}</td>
+                <td class="amount">{{ s.available|floatformat:2 }} {{ s.unit }}</td>
+                <td class="amount" style="color:#c0392b;">{{ s.shortage|floatformat:2 }} {{ s.unit }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+        <a href="{% url 'order_purchase_request_pdf' order.id %}" class="btn btn-primary" target="_blank">📄 Generar Solicitud de Compra (PDF)</a>
+    </div>
+    {% else %}
+    <div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;padding:16px;margin-bottom:20px;">
+        <h4 style="color:#155724;margin-bottom:8px;">✅ Stock suficiente</h4>
+        <p style="color:#155724;font-size:0.95em;">Todos los insumos necesarios están disponibles.</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:20px;display:flex;gap:10px;">
+        {% if not has_shortages %}
+        <form method="post" action="{% url 'order_approve' order.id %}" style="display:inline;">
+            {% csrf_token %}
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Fecha de entrega:</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <input type="date" name="deadline" required style="padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                <button type="submit" class="btn btn-success" style="padding:10px 20px;">✅ Aprobar a Producción</button>
+            </div>
+        </form>
+        {% endif %}
+        <a href="{% url 'order_list' %}" class="btn btn-outline">← Volver a Pedidos</a>
+    </div>
+</div>
+{% endblock %}

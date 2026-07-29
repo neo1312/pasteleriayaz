@@ -4,11 +4,14 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db.models import Sum, Count, Q, F
+from django.template.loader import render_to_string
 from decimal import Decimal
 from datetime import datetime, timedelta
 import json
+import io
+from weasyprint import HTML
 from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag
 
 
@@ -388,6 +391,8 @@ def order_edit(request, pk):
         order.client_id = request.POST.get('client')
         order.product_id = request.POST.get('product')
         order.persons = int(request.POST.get('persons', '1'))
+        order.delivery_cost = Decimal(request.POST.get('delivery_cost', '0'))
+        order.deadline = request.POST.get('deadline') or None
         order.status = request.POST.get('status', order.status)
         order.notes = request.POST.get('notes', '')
         order.save()
@@ -922,20 +927,23 @@ def product_quick_create(request):
     toppings = Topping.objects.filter(is_available=True)
     tiers = ComplexityTier.objects.all()
     tags = EventTag.objects.order_by('name')
+    clients = Client.objects.order_by('name')
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         if not name:
             messages.error(request, 'El nombre es obligatorio.')
             return render(request, 'control/product_quick_create.html', {
                 'breads': breads, 'fillings': fillings, 'toppings': toppings,
-                'tiers': tiers, 'tags': tags,
+                'tiers': tiers, 'tags': tags, 'clients': clients,
             })
+
+        # 1. Create the product
         product = Product(
             name=name,
             category='cake',
             description=request.POST.get('description', ''),
             short_description=request.POST.get('short_description', ''),
-            price=Decimal(request.POST.get('price', '0')),
+            price=Decimal(0),
             is_available=True,
             show_in_gallery=request.POST.get('show_in_gallery') == 'on',
             design_description=request.POST.get('design_description', ''),
@@ -954,12 +962,110 @@ def product_quick_create(request):
         event_tag_ids = request.POST.getlist('event_tags')
         if event_tag_ids:
             product.event_tags.set(EventTag.objects.filter(id__in=event_tag_ids))
-        messages.success(request, f'Producto "{product.name}" creado.')
-        return redirect('product_list')
+
+        # 2. Get or create client
+        client_id = request.POST.get('client')
+        if client_id == '__new__':
+            client = Client.objects.create(
+                name=request.POST.get('new_client_name', '').strip(),
+                email=request.POST.get('new_client_email', '').strip(),
+                phone=request.POST.get('new_client_phone', '').strip(),
+            )
+        else:
+            client = get_object_or_404(Client, pk=client_id)
+
+        # 3. Create the quote with status 'sent'
+        persons = int(request.POST.get('persons', 1))
+        delivery_cost = Decimal(request.POST.get('delivery_cost', '0'))
+        due_date_str = request.POST.get('due_date', '')
+        due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else (datetime.now() + timedelta(days=15)).date()
+
+        quote = Quote(
+            client=client,
+            product=product,
+            persons=persons,
+            design_notes=request.POST.get('design_notes', ''),
+            delivery_cost=delivery_cost,
+            due_date=due_date,
+            status='sent',
+        )
+        quote.recalculate()
+        quote.save()
+
+        messages.success(request, f'✅ Cotización #{quote.id} creada para {client.name}.')
+        return redirect('quote_download_pdf', pk=quote.pk)
+
     return render(request, 'control/product_quick_create.html', {
         'breads': breads, 'fillings': fillings, 'toppings': toppings,
-        'tiers': tiers, 'tags': tags,
+        'tiers': tiers, 'tags': tags, 'clients': clients,
     })
+
+
+# ── PDF Quote ────────────────────────────────────────────────────────────────
+
+@login_required
+def quote_download_pdf(request, pk):
+    quote = get_object_or_404(Quote.objects.select_related('client', 'product'), pk=pk)
+    html = render_to_string('control/quote_pdf.html', {'quote': quote})
+    pdf = HTML(string=html).write_pdf()
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="cotizacion_{quote.id}.pdf"'
+    return response
+
+
+# ── Order Workflow ─────────────────────────────────────────────────────────
+
+@login_required
+def order_approve(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    if request.method == 'POST':
+        order.status = 'in_production'
+        order.deadline = request.POST.get('deadline') or None
+        order.save(update_fields=['status', 'deadline'])
+        messages.success(request, f'Pedido #{order.id} aprobado a producción.')
+    return redirect('order_list')
+
+
+@login_required
+def order_deliver(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    order.status = 'delivered'
+    order.save(update_fields=['status'])
+    messages.success(request, f'Pedido #{order.id} marcado como entregado.')
+    return redirect('order_list')
+
+
+@login_required
+def order_pay(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    order.status = 'paid'
+    order.save(update_fields=['status'])
+    messages.success(request, f'Pedido #{order.id} marcado como pagado.')
+    return redirect('order_list')
+
+
+@login_required
+def order_stock_check(request, pk):
+    order = get_object_or_404(Order.objects.select_related('product', 'client'), pk=pk)
+    shortages = order.check_stock_shortages()
+    order.stock_verified = True
+    order.save(update_fields=['stock_verified'])
+    return render(request, 'control/order_stock_check.html', {
+        'order': order,
+        'shortages': shortages,
+        'has_shortages': any(s['shortage'] > 0 for s in shortages),
+    })
+
+
+@login_required
+def order_purchase_request_pdf(request, pk):
+    order = get_object_or_404(Order.objects.select_related('product', 'client'), pk=pk)
+    shortages = [s for s in order.check_stock_shortages() if s['shortage'] > 0]
+    html = render_to_string('control/purchase_request_pdf.html', {'order': order, 'shortages': shortages})
+    pdf = HTML(string=html).write_pdf()
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="solicitud_compra_pedido_{order.id}.pdf"'
+    return response
 
 
 # ── Purchases CRUD ───────────────────────────────────────────────────────────
@@ -1248,6 +1354,69 @@ def api_calculate_price(request):
         return JsonResponse({k: str(v) for k, v in b.items()})
     except Exception:
         return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
+
+
+# ── API: Calculate price from components (no product required) ─────────────
+
+@login_required
+def api_calculate_price_rapido(request):
+    try:
+        persons = int(request.GET.get('persons', 1))
+        tier_id = request.GET.get('complexity_tier')
+
+        # Build a temporary product object just for price calculation
+        from decimal import Decimal
+        base_bread_id = request.GET.get('base_bread')
+        filling_id = request.GET.get('filling')
+        topping_id = request.GET.get('topping')
+
+        class TempProduct:
+            category = 'cake'
+            base_labor_per_portion = Decimal('0')
+            complexity_tier = None
+            base_bread_id = None
+            filling_id = None
+            topping_id = None
+            def calculate_cost(self): return Decimal('0')
+            def calculate_price_for(self, p):
+                persons = Decimal(str(p))
+                base_cost = self.base_bread.cost_per_portion() if self.base_bread else Decimal('0')
+                filling_cost = self.filling.cost_per_portion() if self.filling else Decimal('0')
+                topping_cost = self.topping.cost_per_portion() if self.topping else Decimal('0')
+                ingredient_cost = (base_cost + filling_cost + topping_cost) * persons
+                base_labor = self.base_bread.base_labor_per_portion if self.base_bread else Decimal('0')
+                filling_labor = self.filling.base_labor_per_portion if self.filling else Decimal('0')
+                topping_labor = self.topping.base_labor_per_portion if self.topping else Decimal('0')
+                labor_cost = (base_labor + filling_labor + topping_labor) * persons
+                base_total = ingredient_cost + labor_cost
+                if self.complexity_tier:
+                    surcharge = base_total * (self.complexity_tier.surcharge_percentage / Decimal('100'))
+                else:
+                    surcharge = Decimal('0')
+                return {
+                    'persons': persons,
+                    'ingredient_cost': ingredient_cost,
+                    'labor_cost': labor_cost,
+                    'base_total': base_total,
+                    'design_surcharge': surcharge,
+                    'total': base_total + surcharge,
+                    'price_per_person': (base_total + surcharge) / persons if persons > 0 else Decimal('0'),
+                }
+
+        tmp = TempProduct()
+        if base_bread_id:
+            tmp.base_bread = get_object_or_404(BaseBread, pk=base_bread_id)
+        if filling_id:
+            tmp.filling = get_object_or_404(Filling, pk=filling_id)
+        if topping_id:
+            tmp.topping = get_object_or_404(Topping, pk=topping_id)
+        if tier_id:
+            tmp.complexity_tier = get_object_or_404(ComplexityTier, pk=tier_id)
+
+        b = tmp.calculate_price_for(persons)
+        return JsonResponse({k: str(v) for k, v in b.items()})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 # ── Client Auth ──────────────────────────────────────────────────────────────

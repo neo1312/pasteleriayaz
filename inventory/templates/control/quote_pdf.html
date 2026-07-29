@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: letter; margin: 2cm; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #3d2817; font-size: 12pt; line-height: 1.5; }
+  .header { text-align: center; border-bottom: 3px solid #d4a373; padding-bottom: 15px; margin-bottom: 25px; }
+  .header h1 { font-size: 24pt; margin: 0; color: #3d2817; }
+  .header p { font-size: 10pt; color: #888; margin: 4px 0 0; }
+  .quote-info { display: flex; justify-content: space-between; margin-bottom: 25px; }
+  .quote-info .block { width: 48%; }
+  .quote-info .block h3 { font-size: 11pt; margin: 0 0 6px; color: #d4a373; text-transform: uppercase; letter-spacing: 1px; }
+  .quote-info .block p { margin: 2px 0; font-size: 10pt; color: #555; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  th { background: #f5f1e8; text-align: left; padding: 10px 12px; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.5px; color: #3d2817; }
+  td { padding: 10px 12px; border-bottom: 1px solid #e8d4c0; font-size: 10pt; }
+  .amount { text-align: right; font-weight: 600; }
+  .total-row td { border-top: 2px solid #d4a373; font-weight: 700; font-size: 11pt; padding-top: 12px; }
+  .notes { margin-top: 25px; padding: 15px; background: #faf8f3; border-radius: 8px; font-size: 10pt; color: #555; }
+  .footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9pt; color: #aaa; border-top: 1px solid #e8d4c0; padding-top: 10px; }
+  .badge { display: inline-block; background: #fae8d6; color: #8b6914; padding: 3px 8px; border-radius: 4px; font-size: 9pt; margin-right: 4px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Pastelería Zaret</h1>
+  <p>Delicatessen Artesanales · Cuautepec Hidalgo · 775-128-0867</p>
+</div>
+
+<div class="quote-info">
+  <div class="block">
+    <h3>Cliente</h3>
+    <p><strong>{{ quote.client.name }}</strong></p>
+    <p>{{ quote.client.email }}</p>
+    <p>{{ quote.client.phone }}</p>
+  </div>
+  <div class="block" style="text-align:right;">
+    <h3>Cotización #{{ quote.id }}</h3>
+    <p>Fecha: {{ quote.created_at|date:"d/m/Y" }}</p>
+    <p>Vence: {{ quote.due_date|date:"d/m/Y" }}</p>
+  </div>
+</div>
+
+<h2 style="font-size:14pt;margin-bottom:5px;">{{ quote.product.name }}</h2>
+{% if quote.product.short_description %}
+<p style="color:#888;font-size:10pt;margin-bottom:15px;">{{ quote.product.short_description }}</p>
+{% endif %}
+
+<table>
+  <tr>
+    <th style="width:50%;">Concepto</th>
+    <th style="width:15%;" class="amount">Por persona</th>
+    <th style="width:15%;" class="amount">× {{ quote.persons }} pers.</th>
+    <th style="width:20%;" class="amount">Total</th>
+  </tr>
+  <tr>
+    <td>🧾 Ingredientes</td>
+    <td class="amount">${{ quote.product.calculate_price_for.ingredient_cost|default:"0"|floatformat:2 }}</td>
+    <td></td>
+    <td class="amount">${{ quote.ingredient_cost|floatformat:2 }}</td>
+  </tr>
+  <tr>
+    <td>👨‍🍳 Mano de obra</td>
+    <td class="amount">${{ quote.product.calculate_price_for.labor_cost|default:"0"|floatformat:2 }}</td>
+    <td></td>
+    <td class="amount">${{ quote.labor_cost|floatformat:2 }}</td>
+  </tr>
+  <tr>
+    <td>🎨 Recargo por diseño</td>
+    <td class="amount">${{ quote.design_surcharge|floatformat:2 }}</td>
+    <td></td>
+    <td class="amount">${{ quote.design_surcharge|floatformat:2 }}</td>
+  </tr>
+  <tr>
+    <td>💰 Precio unitario</td>
+    <td class="amount"><strong>${{ quote.unit_price|floatformat:2 }}</strong></td>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr class="total-row">
+    <td><strong>📦 Subtotal</strong></td>
+    <td></td>
+    <td class="amount"><strong>${{ quote.total_price|floatformat:2 }}</strong></td>
+    <td></td>
+  </tr>
+  {% if quote.delivery_cost %}
+  <tr>
+    <td>🚚 Envío</td>
+    <td></td>
+    <td></td>
+    <td class="amount">+${{ quote.delivery_cost|floatformat:2 }}</td>
+  </tr>
+  {% endif %}
+  <tr class="total-row">
+    <td><strong>🏆 Gran Total</strong></td>
+    <td></td>
+    <td></td>
+    <td class="amount"><strong>${{ quote.grand_total|floatformat:2 }}</strong></td>
+  </tr>
+</table>
+
+{% if quote.product.event_tags.all %}
+<div style="margin:15px 0;">
+  {% for t in quote.product.event_tags.all %}
+  <span class="badge">{{ t.name }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if quote.design_notes %}
+<div class="notes">
+  <strong>📝 Notas de diseño:</strong><br>
+  {{ quote.design_notes }}
+</div>
+{% endif %}
+
+{% if quote.notes %}
+<div class="notes">
+  <strong>📋 Notas:</strong><br>
+  {{ quote.notes }}
+</div>
+{% endif %}
+
+<div style="margin-top:40px;font-size:10pt;color:#888;">
+  <p><em>Cotización válida por 15 días. Precios sujetos a cambio sin previo aviso.</em></p>
+  <p><em>Para confirmar tu pedido, contáctanos al 775-128-0867 o vía WhatsApp.</em></p>
+</div>
+
+<div class="footer">
+  Pastelería Zaret · Cuautepec Hidalgo · 775-128-0867 · WhatsApp: 527751280867
+</div>
+</body>
+</html>

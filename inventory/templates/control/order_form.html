@@ -3,7 +3,7 @@
 {% block page_title %}✏️ Pedido #{{ object.id }}{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:600px;">
+<div class="card" style="max-width:700px;">
     <form method="post">
         {% csrf_token %}
         <div class="grid-2">
@@ -30,12 +30,22 @@
                 <input type="number" name="persons" value="{{ object.persons }}" min="1" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
             </div>
             <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Costo de envío</label>
+                <input type="number" name="delivery_cost" value="{{ object.delivery_cost|default:'0' }}" step="0.01" min="0" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Estado</label>
                 <select name="status" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
                     {% for v, l in status_choices %}
                     <option value="{{ v }}" {% if object.status == v %}selected{% endif %}>{{ l }}</option>
                     {% endfor %}
                 </select>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Fecha de entrega</label>
+                <input type="date" name="deadline" value="{{ object.deadline|date:'Y-m-d'|default:'' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
             </div>
         </div>
         <div class="form-group" style="margin-bottom:16px;">

@@ -124,15 +124,20 @@ class OrderAdminForm(forms.ModelForm):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     form = OrderAdminForm
-    list_display = ('id', 'client', 'product', 'persons', 'unit_price', 'total_price', 'status', 'order_date')
-    list_filter = ('status', 'order_date', 'client')
+    list_display = ('id', 'client', 'product', 'persons', 'unit_price', 'total_price', 'grand_total_display', 'deadline', 'stock_verified', 'status', 'order_date')
+    list_filter = ('status', 'order_date', 'client', 'stock_verified', 'deadline')
     search_fields = ('client__name', 'product__name')
-    readonly_fields = ('order_date', 'unit_price', 'design_surcharge', 'labor_cost', 'total_price')
+    readonly_fields = ('order_date', 'unit_price', 'design_surcharge', 'labor_cost', 'total_price', 'grand_total_display')
     fieldsets = (
-        ('Detalles del Pedido', {'fields': ('client', 'product', 'persons', 'unit_price', 'total_price')}),
+        ('Detalles del Pedido', {'fields': ('client', 'product', 'persons', 'unit_price', 'total_price', 'grand_total_display')}),
         ('Personalización', {'fields': ('design_notes', 'design_surcharge', 'labor_cost')}),
+        ('Envío y Entrega', {'fields': ('delivery_cost', 'deadline', 'stock_verified')}),
         ('Estado', {'fields': ('status', 'notes')}),
     )
+
+    def grand_total_display(self, obj):
+        return f"${obj.delivery_cost + obj.total_price:.2f}" if obj.pk else "—"
+    grand_total_display.short_description = 'Gran Total'
 
 
 @admin.register(Provider)

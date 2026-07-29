@@ -80,8 +80,18 @@ urlpatterns = [
     path('etiquetas-evento/<int:pk>/editar/', views.event_tag_edit, name='event_tag_edit'),
     path('etiquetas-evento/<int:pk>/eliminar/', views.event_tag_delete, name='event_tag_delete'),
 
-    # Creación Rápida de Producto
+    # Creación Rápida de Producto + Cotización
     path('productos/crear-rapido/', views.product_quick_create, name='product_quick_create'),
+
+    # Cotizaciones — PDF
+    path('cotizaciones/<int:pk>/pdf/', views.quote_download_pdf, name='quote_download_pdf'),
+
+    # Pedidos — Workflow
+    path('pedidos/<int:pk>/aprobar/', views.order_approve, name='order_approve'),
+    path('pedidos/<int:pk>/entregar/', views.order_deliver, name='order_deliver'),
+    path('pedidos/<int:pk>/pagar/', views.order_pay, name='order_pay'),
+    path('pedidos/<int:pk>/verificar-stock/', views.order_stock_check, name='order_stock_check'),
+    path('pedidos/<int:pk>/solicitud-compra/', views.order_purchase_request_pdf, name='order_purchase_request_pdf'),
 
     # Compras
     path('compras/', views.purchase_list, name='purchase_list'),
@@ -111,6 +121,7 @@ urlpatterns = [
 
     # API
     path('api/calcular-precio/', views.api_calculate_price, name='api_calculate_price'),
+    path('api/calcular-precio-rapido/', views.api_calculate_price_rapido, name='api_calculate_price_rapido'),
 
     # Cliente — auth
     path('registro/', views.register, name='register'),

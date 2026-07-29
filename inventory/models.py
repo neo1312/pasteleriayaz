@@ -374,9 +374,12 @@ class Client(models.Model):
 
 class Order(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pendiente'),
-        ('completed', 'Completado'),
-        ('cancelled', 'Cancelado'),
+        ('pending',       'Pendiente'),
+        ('approved',      'Aprobado'),
+        ('in_production', 'En producción'),
+        ('delivered',     'Entregado'),
+        ('paid',          'Pagado'),
+        ('cancelled',     'Cancelado'),
     ]
 
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='orders', verbose_name="Cliente")
@@ -387,7 +390,10 @@ class Order(models.Model):
     design_surcharge = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Recargo por diseño")
     labor_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Mano de obra")
     total_price = models.DecimalField(max_digits=16, decimal_places=6, verbose_name="Precio total")
+    delivery_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Costo de envío")
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="Fecha del pedido")
+    deadline = models.DateField(null=True, blank=True, verbose_name="Fecha de entrega")
+    stock_verified = models.BooleanField(default=False, verbose_name="Stock verificado")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Estado")
     notes = models.TextField(blank=True, null=True, verbose_name="Notas")
 
@@ -399,6 +405,14 @@ class Order(models.Model):
             self.labor_cost = breakdown['labor_cost']
             self.total_price = breakdown['total']
         super().save(*args, **kwargs)
+
+    @property
+    def grand_total(self):
+        return (self.total_price or 0) + (self.delivery_cost or 0)
+
+    def check_stock_shortages(self):
+        """Returns list of missing ingredients for this order's product × persons."""
+        return self.product.check_stock_for(self.persons) if self.product else []
 
     def __str__(self):
         return f"Pedido #{self.id} – {self.client.name} ({self.product.name} × {self.persons} pers.)"

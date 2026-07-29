@@ -3,6 +3,20 @@
 {% block page_title %}📦 Pedidos{% endblock %}
 
 {% block content %}
+<style>
+.btn-approve { background:#27ae60;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
+.btn-deliver { background:#2980b9;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
+.btn-pay { background:#8e44ad;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
+.btn-stock { background:#f39c12;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
+.order-status { display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600; }
+.order-status.pending { background:#fef3cd;color:#856404; }
+.order-status.approved { background:#d1ecf1;color:#0c5460; }
+.order-status.in_production { background:#cce5ff;color:#004085; }
+.order-status.delivered { background:#d4edda;color:#155724; }
+.order-status.paid { background:#c3e6cb;color:#1e7e34; }
+.order-status.cancelled { background:#f8d7da;color:#721c24; }
+</style>
+
 <div class="card">
     <div class="filters">
         <a href="{% url 'order_list' %}" class="filter-btn {% if not status_filter %}active{% endif %}">Todos</a>
@@ -14,7 +28,7 @@
     {% if orders %}
     <table>
         <thead>
-            <tr><th>#</th><th>Cliente</th><th>Producto</th><th>Pers.</th><th>Total</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
+            <tr><th>#</th><th>Cliente</th><th>Producto</th><th>Pers.</th><th>Total</th><th>Envío</th><th>Gran Total</th><th>Vence</th><th>Stock</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
         <tbody>
             {% for o in orders %}
@@ -24,10 +38,31 @@
                 <td>{{ o.product.name }}</td>
                 <td>{{ o.persons }}</td>
                 <td class="amount">${{ o.total_price|floatformat:2 }}</td>
-                <td>{{ o.order_date|date:"d/m/Y" }}</td>
-                <td><span class="badge-{{ o.status }}">{{ o.get_status_display }}</span></td>
-                <td class="actions">
-                    <a href="{% url 'order_edit' o.id %}" class="btn btn-sm btn-primary">Editar</a>
+                <td class="amount">${{ o.delivery_cost|floatformat:2 }}</td>
+                <td class="amount"><strong>${{ o.grand_total|floatformat:2 }}</strong></td>
+                <td>{{ o.deadline|date:"d/m/Y"|default:'—' }}</td>
+                <td>{% if o.stock_verified %}✅{% else %}❌{% endif %}</td>
+                <td><span class="order-status {{ o.status }}">{{ o.get_status_display }}</span></td>
+                <td class="actions" style="display:flex;flex-wrap:wrap;gap:4px;">
+                    {% if o.status == 'pending' %}
+                    <form method="post" action="{% url 'order_stock_check' o.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-stock" style="border:none;cursor:pointer;">🔍 Stock</button>
+                    </form>
+                    {% endif %}
+                    {% if o.status == 'approved' or o.status == 'in_production' %}
+                    <form method="post" action="{% url 'order_deliver' o.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-deliver" style="border:none;cursor:pointer;" onclick="return confirm('¿Marcar pedido #{{ o.id }} como entregado?')">🚚 Entregar</button>
+                    </form>
+                    {% endif %}
+                    {% if o.status == 'delivered' %}
+                    <form method="post" action="{% url 'order_pay' o.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-pay" style="border:none;cursor:pointer;" onclick="return confirm('¿Marcar pedido #{{ o.id }} como pagado?')">💰 Pagar</button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'order_edit' o.id %}" class="btn btn-sm btn-outline">Editar</a>
                     <a href="{% url 'order_delete' o.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar pedido #{{ o.id }}?')">Eliminar</a>
                 </td>
             </tr>
@@ -35,7 +70,7 @@
         </tbody>
     </table>
     {% else %}
-    <div class="empty-state"><div class="icon">📦</div><h3>No hay pedidos</h3></div>
+    <div class="empty-state"><div class="icon">📦</div><h3>No hay pedidos{% if status_filter %} en este estado{% endif %}</h3></div>
     {% endif %}
 </div>
 {% endblock %}

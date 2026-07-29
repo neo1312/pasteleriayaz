@@ -244,6 +244,9 @@
             </a>
 
             <div class="nav-section">Ventas</div>
+            <a href="{% url 'product_quick_create' %}" class="{% if request.resolver_match.url_name == 'product_quick_create' %}active{% endif %}">
+                🚀 <span>Cotización Rápida</span>
+            </a>
             <a href="{% url 'quote_maker' %}" class="{% if request.resolver_match.url_name == 'quote_maker' %}active{% endif %}">
                 📄 <span>Nueva Cotización</span>
             </a>

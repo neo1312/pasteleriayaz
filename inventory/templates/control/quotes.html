@@ -3,6 +3,7 @@
 {% block page_title %}📋 Cotizaciones{% endblock %}
 {% block header_actions %}
 <a href="{% url 'quote_maker' %}" class="btn btn-primary">+ Nueva</a>
+<a href="{% url 'product_quick_create' %}" class="btn btn-success">🚀 Cotización Rápida</a>
 {% endblock %}
 
 {% block content %}
@@ -31,7 +32,8 @@
                 <td class="amount">${{ q.grand_total|floatformat:2 }}</td>
                 <td>{{ q.due_date|date:"d/m/Y"|default:'—' }}</td>
                 <td><span class="badge-{{ q.status }}">{{ q.get_status_display }}</span></td>
-                <td class="actions">
+                <td class="actions" style="display:flex;flex-wrap:wrap;gap:4px;">
+                    <a href="{% url 'quote_download_pdf' q.id %}" class="btn btn-sm btn-outline" target="_blank">📄 PDF</a>
                     {% if q.status == 'draft' %}
                     <a href="{% url 'quote_send' q.id %}" class="btn btn-sm btn-primary" onclick="return confirm('¿Enviar cotización #{{ q.id }} al cliente?')">Enviar</a>
                     {% endif %}

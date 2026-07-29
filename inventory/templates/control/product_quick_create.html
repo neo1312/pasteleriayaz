@@ -1,28 +1,35 @@
 {% extends 'control/base.html' %}
-{% block title %}Creación Rápida de Pastel - Pastelería Yaz{% endblock %}
-{% block page_title %}🚀 Creación Rápida de Pastel{% endblock %}
+{% block title %}Cotización Rápida - Pastelería Yaz{% endblock %}
+{% block page_title %}🚀 Cotización Rápida — Pastel{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:700px;">
-    <form method="post">
-        {% csrf_token %}
-        <div class="grid-2">
-            <div class="form-group" style="margin-bottom:16px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre del pastel</label>
-                <input type="text" name="name" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
-            </div>
-            <div class="form-group" style="margin-bottom:16px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Precio</label>
-                <input type="number" name="price" value="0" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
-            </div>
+<style>
+    .maker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start; }
+    .price-display { padding: 10px 0; }
+    .price-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95em; color: #555; }
+    .price-row.total { border-top: 2px solid #d4a373; margin-top: 8px; padding-top: 12px; font-weight: 700; color: #3d2817; font-size: 1.15em; }
+    .price-row .value { font-weight: 600; }
+    .inline-add { margin-top: 6px; }
+    .inline-add a { color: #d4a373; font-size: 0.85em; cursor: pointer; text-decoration: none; }
+    .inline-add a:hover { text-decoration: underline; }
+    @media (max-width: 768px) { .maker-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="maker-grid">
+    <div class="card">
+        <h3 style="margin-bottom:20px;">🍰 Armar Pastel</h3>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre del pastel</label>
+            <input type="text" id="id_name" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
         </div>
 
         <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
-            <h4 style="margin-bottom:12px;color:#3d2817;">🍰 Componentes del Pastel</h4>
+            <h4 style="margin-bottom:12px;color:#3d2817;">Componentes</h4>
             <div class="grid-3">
                 <div class="form-group" style="margin-bottom:0;">
                     <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Base</label>
-                    <select name="base_bread" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <select id="id_base_bread" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
                         <option value="">— Seleccionar —</option>
                         {% for b in breads %}
                         <option value="{{ b.id }}">{{ b.name }}</option>
@@ -31,7 +38,7 @@
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Relleno</label>
-                    <select name="filling" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <select id="id_filling" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
                         <option value="">— Sin relleno —</option>
                         {% for f in fillings %}
                         <option value="{{ f.id }}">{{ f.name }}</option>
@@ -40,7 +47,7 @@
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Cubierta</label>
-                    <select name="topping" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <select id="id_topping" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
                         <option value="">— Sin cubierta —</option>
                         {% for t in toppings %}
                         <option value="{{ t.id }}">{{ t.name }}</option>
@@ -49,8 +56,8 @@
                 </div>
             </div>
             <div class="form-group" style="margin-top:12px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nivel de Complejidad (Diseño)</label>
-                <select name="complexity_tier" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nivel de Complejidad</label>
+                <select id="id_complexity_tier" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
                     <option value="">— Sin complejidad —</option>
                     {% for t in tiers %}
                     <option value="{{ t.id }}">{{ t.name }} (+{{ t.surcharge_percentage }}%)</option>
@@ -60,24 +67,24 @@
         </div>
 
         <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
-            <h4 style="margin-bottom:12px;color:#3d2817;">🖼️ Galería y Metadata</h4>
+            <h4 style="margin-bottom:12px;color:#3d2817;">🖼️ Galería (opcional)</h4>
             <div class="form-group" style="margin-bottom:12px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción corta (para galería)</label>
-                <input type="text" name="short_description" maxlength="300" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción corta</label>
+                <input type="text" id="id_short_description" maxlength="300" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
             </div>
             <div class="form-group" style="margin-bottom:12px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción de diseño</label>
-                <textarea name="design_description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;"></textarea>
+                <textarea id="id_design_description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;"></textarea>
             </div>
             <div class="grid-2">
                 <div class="form-group" style="margin-bottom:0;">
-                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Esquema de colores</label>
-                    <input type="text" name="color_scheme" placeholder="Ej: rosa, dorado, blanco" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Colores</label>
+                    <input type="text" id="id_color_scheme" placeholder="rosa, dorado, blanco" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Género</label>
-                    <select name="gender" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
-                        <option value="">— Seleccionar —</option>
+                    <select id="id_gender" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">—</option>
                         <option value="nino">Niño</option>
                         <option value="nina">Niña</option>
                         <option value="hombre">Hombre</option>
@@ -91,23 +98,225 @@
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                     {% for t in tags %}
                     <label style="display:flex;align-items:center;gap:4px;font-size:0.9em;cursor:pointer;">
-                        <input type="checkbox" name="event_tags" value="{{ t.id }}"> {{ t.name }}
+                        <input type="checkbox" class="event-tag" value="{{ t.id }}"> {{ t.name }}
                     </label>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
-        <div class="form-group" style="margin-bottom:16px;">
-            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
-                <input type="checkbox" name="show_in_gallery"> Mostrar en galería
-            </label>
+        <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
+            <h4 style="margin-bottom:12px;color:#3d2817;">👤 Cliente</h4>
+            <div class="form-group" style="margin-bottom:12px;">
+                <select id="id_client" required onchange="toggleNewClient()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Seleccionar cliente —</option>
+                    {% for c in clients %}
+                    <option value="{{ c.id }}">{{ c.name }} — {{ c.email }}</option>
+                    {% endfor %}
+                    <option value="__new__">➕ Nuevo cliente...</option>
+                </select>
+            </div>
+            <div id="newClientFields" style="display:none;">
+                <div class="grid-2">
+                    <div class="form-group" style="margin-bottom:8px;">
+                        <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.85em;color:#555;">Nombre</label>
+                        <input type="text" id="new_client_name" placeholder="Nombre completo" style="width:100%;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:8px;">
+                        <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.85em;color:#555;">Email</label>
+                        <input type="email" id="new_client_email" placeholder="correo@ejemplo.com" style="width:100%;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.85em;color:#555;">Teléfono</label>
+                    <input type="text" id="new_client_phone" placeholder="+52 555 123 4567" style="width:100%;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="card">
+            <h3 style="margin-bottom:16px;">📋 Parámetros</h3>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas</label>
+                <input type="number" id="id_persons" value="1" min="1" max="1000" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Notas de diseño</label>
+                <textarea id="id_design_notes" placeholder="Decoración, colores, mensaje personalizado..." style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;"></textarea>
+            </div>
+            <div class="grid-2">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Costo de envío</label>
+                    <input type="number" id="id_delivery_cost" value="0" step="0.01" min="0" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Vence</label>
+                    <input type="date" id="id_due_date" value="{{ ''|date:'Y-m-d' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                    <input type="checkbox" id="id_show_in_gallery"> Mostrar en galería
+                </label>
+            </div>
         </div>
 
-        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
-            <button type="submit" class="btn btn-success">🚀 Crear Pastel</button>
-            <a href="{% url 'product_list' %}" class="btn btn-outline">Cancelar</a>
+        <div class="card" style="margin-top:20px;">
+            <h3 style="margin-bottom:20px;">💰 Desglose de Precio</h3>
+            <div class="price-display" id="priceDisplay">
+                <div class="empty-state">
+                    <h3>Selecciona componentes</h3>
+                    <p>Selecciona una base, relleno y cubierta para ver el precio.</p>
+                </div>
+            </div>
         </div>
-    </form>
+
+        <button class="btn btn-success" style="width:100%;padding:14px;font-size:1.05em;margin-top:10px;" onclick="createQuickQuote()" id="btnCreate">
+            🚀 Crear Cotización y PDF
+        </button>
+    </div>
 </div>
+
+<script>
+    function toggleNewClient() {
+        const val = document.getElementById('id_client').value;
+        document.getElementById('newClientFields').style.display = val === '__new__' ? 'block' : 'none';
+    }
+
+    function getFormData() {
+        return {
+            base_bread: document.getElementById('id_base_bread').value,
+            filling: document.getElementById('id_filling').value,
+            topping: document.getElementById('id_topping').value,
+            complexity_tier: document.getElementById('id_complexity_tier').value,
+            persons: parseInt(document.getElementById('id_persons').value) || 1,
+            delivery_cost: parseFloat(document.getElementById('id_delivery_cost').value) || 0,
+        };
+    }
+
+    function updatePrice() {
+        const data = getFormData();
+        const display = document.getElementById('priceDisplay');
+
+        if (!data.base_bread) {
+            display.innerHTML = `<div class="empty-state"><h3>Selecciona componentes</h3><p>Selecciona al menos una base para ver el precio.</p></div>`;
+            return;
+        }
+
+        // Use the existing API to calculate price for a temporary product
+        // We send base_bread, filling, topping, complexity_tier as params
+        const persons = data.persons;
+        const deliveryCost = data.delivery_cost;
+        const params = new URLSearchParams({
+            product: 0,  // will be handled server-side
+            persons: persons,
+            complexity_tier: data.complexity_tier || '',
+            base_bread: data.base_bread || '',
+            filling: data.filling || '',
+            topping: data.topping || '',
+        });
+
+        fetch('/api/calcular-precio-rapido/?' + params.toString())
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    display.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${data.error}</p></div>`;
+                    return;
+                }
+                const total = parseFloat(data.total);
+                const grandTotal = total + deliveryCost;
+                display.innerHTML = `
+                    <div class="price-row"><span>🧾 Ingredientes</span><span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span></div>
+                    <div class="price-row"><span>👨‍🍳 Mano de obra</span><span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span></div>
+                    <div class="price-row"><span>🎨 Recargo por diseño</span><span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span></div>
+                    <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.price_per_person).toFixed(2)}</span></div>
+                    <div class="price-row total"><span>📦 Subtotal (${persons} pers.)</span><span class="value">$${total.toFixed(2)}</span></div>
+                    ${deliveryCost > 0 ? `<div class="price-row"><span>🚚 Envío</span><span class="value">+$${deliveryCost.toFixed(2)}</span></div>
+                    <div class="price-row total"><span>🏆 Gran Total</span><span class="value">$${grandTotal.toFixed(2)}</span></div>` : ''}
+                `;
+            })
+            .catch(err => {
+                display.innerHTML = `<div class="empty-state"><h3>Error de conexión</h3><p>${err}</p></div>`;
+            });
+    }
+
+    function getCookie(name) {
+        let c = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return c ? c[2] : null;
+    }
+
+    function createQuickQuote() {
+        const name = document.getElementById('id_name').value.trim();
+        const clientVal = document.getElementById('id_client').value;
+        const persons = document.getElementById('id_persons').value;
+        const btn = document.getElementById('btnCreate');
+
+        if (!name) { alert('El nombre del pastel es obligatorio.'); return; }
+        if (!clientVal) { alert('Selecciona o crea un cliente.'); return; }
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Creando...';
+
+        let clientId = clientVal;
+
+        function doCreate(cid) {
+            const data = new URLSearchParams();
+            data.append('name', name);
+            data.append('base_bread', document.getElementById('id_base_bread').value || '');
+            data.append('filling', document.getElementById('id_filling').value || '');
+            data.append('topping', document.getElementById('id_topping').value || '');
+            data.append('complexity_tier', document.getElementById('id_complexity_tier').value || '');
+            data.append('short_description', document.getElementById('id_short_description').value || '');
+            data.append('design_description', document.getElementById('id_design_description').value || '');
+            data.append('color_scheme', document.getElementById('id_color_scheme').value || '');
+            data.append('gender', document.getElementById('id_gender').value || '');
+            data.append('client', cid);
+            data.append('persons', persons);
+            data.append('design_notes', document.getElementById('id_design_notes').value || '');
+            data.append('delivery_cost', document.getElementById('id_delivery_cost').value || '0');
+            data.append('due_date', document.getElementById('id_due_date').value || '');
+            data.append('show_in_gallery', document.getElementById('id_show_in_gallery').checked ? 'on' : '');
+
+            const tags = Array.from(document.querySelectorAll('.event-tag:checked')).map(el => el.value);
+            tags.forEach(t => data.append('event_tags', t));
+
+            fetch('{% url "product_quick_create" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: data
+            })
+            .then(r => {
+                if (r.redirected) {
+                    window.location.href = r.url;
+                } else {
+                    r.json().then(resp => {
+                        if (resp.error) { alert(resp.error); btn.disabled = false; btn.textContent = '🚀 Crear Cotización y PDF'; }
+                    });
+                }
+            })
+            .catch(() => { alert('Error de conexión.'); btn.disabled = false; btn.textContent = '🚀 Crear Cotización y PDF'; });
+        }
+
+        if (clientVal === '__new__') {
+            const name = document.getElementById('new_client_name').value.trim();
+            const email = document.getElementById('new_client_email').value.trim();
+            if (!name || !email) { alert('Nombre y email son obligatorios para nuevo cliente.'); btn.disabled = false; btn.textContent = '🚀 Crear Cotización y PDF'; return; }
+            fetch('{% url "client_create" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone: document.getElementById('new_client_phone').value.trim() })
+            })
+            .then(r => r.json())
+            .then(resp => {
+                if (resp.error) { alert(resp.error); btn.disabled = false; btn.textContent = '🚀 Crear Cotización y PDF'; }
+                else doCreate(resp.id);
+            })
+            .catch(() => { alert('Error al crear cliente.'); btn.disabled = false; btn.textContent = '🚀 Crear Cotización y PDF'; });
+        } else {
+            doCreate(clientVal);
+        }
+    }
+</script>
 {% endblock %}
