@@ -87,6 +87,8 @@
                 <select name="unit" style="width:100%;padding:8px;border:2px solid #e8d4c0;border-radius:6px;">
                     <option value="g">Gramos</option>
                     <option value="mg">Miligramos</option>
+                    <option value="ml">Mililitros</option>
+                    <option value="l">Litros</option>
                     <option value="pcs">Piezas</option>
                 </select>
             </div>
@@ -101,7 +103,7 @@
 {% endif %}
 
 <script>
-const unitLabels = {'g': 'Gramos', 'mg': 'Miligramos', 'pcs': 'Piezas'};
+const unitLabels = {'g': 'Gramos', 'mg': 'Miligramos', 'ml': 'Mililitros', 'l': 'Litros', 'pcs': 'Piezas'};
 const rawProducts = [
     {% for rp in raw_products %}{id: {{ rp.id }}, name: '{{ rp.name|escapejs }}'},{% endfor %}
 ];

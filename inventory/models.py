@@ -137,6 +137,8 @@ class BaseBreadIngredient(models.Model):
     INGREDIENT_UNIT_CHOICES = [
         ('g', 'Gramos'),
         ('mg', 'Miligramos'),
+        ('ml', 'Mililitros'),
+        ('l', 'Litros'),
         ('pcs', 'Piezas'),
     ]
 
@@ -159,6 +161,8 @@ class FillingIngredient(models.Model):
     INGREDIENT_UNIT_CHOICES = [
         ('g', 'Gramos'),
         ('mg', 'Miligramos'),
+        ('ml', 'Mililitros'),
+        ('l', 'Litros'),
         ('pcs', 'Piezas'),
     ]
 
@@ -181,6 +185,8 @@ class ToppingIngredient(models.Model):
     INGREDIENT_UNIT_CHOICES = [
         ('g', 'Gramos'),
         ('mg', 'Miligramos'),
+        ('ml', 'Mililitros'),
+        ('l', 'Litros'),
         ('pcs', 'Piezas'),
     ]
 
