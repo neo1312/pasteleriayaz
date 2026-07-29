@@ -134,22 +134,17 @@ class Topping(models.Model):
 
 
 class BaseBreadIngredient(models.Model):
-    INGREDIENT_UNIT_CHOICES = [
-        ('g', 'Gramos'),
-        ('mg', 'Miligramos'),
-        ('ml', 'Mililitros'),
-        ('l', 'Litros'),
-        ('pcs', 'Piezas'),
-    ]
-
     base_bread = models.ForeignKey(BaseBread, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Base de pastel")
     raw_product = models.ForeignKey('RawProduct', on_delete=models.CASCADE, related_name='base_bread_uses', verbose_name="Materia prima")
     quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad necesaria por porción (1 persona)", verbose_name="Cantidad")
-    unit = models.CharField(max_length=5, choices=INGREDIENT_UNIT_CHOICES, default='g', verbose_name="Unidad")
     notes = models.CharField(max_length=200, blank=True, help_text="Nota opcional, ej. 'tamizado', 'derretido'", verbose_name="Notas")
 
     def __str__(self):
-        return f"{self.quantity} {self.get_unit_display()} de {self.raw_product.name}"
+        return f"{self.quantity} {self.raw_product.get_unit_display()} de {self.raw_product.name}"
+
+    @property
+    def unit(self):
+        return self.raw_product.unit
 
     class Meta:
         unique_together = ('base_bread', 'raw_product')
@@ -158,22 +153,17 @@ class BaseBreadIngredient(models.Model):
 
 
 class FillingIngredient(models.Model):
-    INGREDIENT_UNIT_CHOICES = [
-        ('g', 'Gramos'),
-        ('mg', 'Miligramos'),
-        ('ml', 'Mililitros'),
-        ('l', 'Litros'),
-        ('pcs', 'Piezas'),
-    ]
-
     filling = models.ForeignKey(Filling, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Relleno")
     raw_product = models.ForeignKey('RawProduct', on_delete=models.CASCADE, related_name='filling_uses', verbose_name="Materia prima")
     quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad necesaria por porción (1 persona)", verbose_name="Cantidad")
-    unit = models.CharField(max_length=5, choices=INGREDIENT_UNIT_CHOICES, default='g', verbose_name="Unidad")
     notes = models.CharField(max_length=200, blank=True, help_text="Nota opcional, ej. 'tamizado', 'derretido'", verbose_name="Notas")
 
     def __str__(self):
-        return f"{self.quantity} {self.get_unit_display()} de {self.raw_product.name}"
+        return f"{self.quantity} {self.raw_product.get_unit_display()} de {self.raw_product.name}"
+
+    @property
+    def unit(self):
+        return self.raw_product.unit
 
     class Meta:
         unique_together = ('filling', 'raw_product')
@@ -182,22 +172,17 @@ class FillingIngredient(models.Model):
 
 
 class ToppingIngredient(models.Model):
-    INGREDIENT_UNIT_CHOICES = [
-        ('g', 'Gramos'),
-        ('mg', 'Miligramos'),
-        ('ml', 'Mililitros'),
-        ('l', 'Litros'),
-        ('pcs', 'Piezas'),
-    ]
-
     topping = models.ForeignKey(Topping, on_delete=models.CASCADE, related_name='ingredients', verbose_name="Cubierta")
     raw_product = models.ForeignKey('RawProduct', on_delete=models.CASCADE, related_name='topping_uses', verbose_name="Materia prima")
     quantity = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad necesaria por porción (1 persona)", verbose_name="Cantidad")
-    unit = models.CharField(max_length=5, choices=INGREDIENT_UNIT_CHOICES, default='g', verbose_name="Unidad")
     notes = models.CharField(max_length=200, blank=True, help_text="Nota opcional, ej. 'tamizado', 'derretido'", verbose_name="Notas")
 
     def __str__(self):
-        return f"{self.quantity} {self.get_unit_display()} de {self.raw_product.name}"
+        return f"{self.quantity} {self.raw_product.get_unit_display()} de {self.raw_product.name}"
+
+    @property
+    def unit(self):
+        return self.raw_product.unit
 
     class Meta:
         unique_together = ('topping', 'raw_product')

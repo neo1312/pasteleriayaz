@@ -394,7 +394,7 @@ class TransportZoneAdmin(admin.ModelAdmin):
 class BaseBreadIngredientInline(admin.TabularInline):
     model = BaseBreadIngredient
     extra = 1
-    fields = ('raw_product', 'quantity', 'unit', 'notes')
+    fields = ('raw_product', 'quantity', 'notes')
     verbose_name = "Ingrediente"
     verbose_name_plural = "Ingredientes"
 
@@ -418,7 +418,7 @@ class BaseBreadAdmin(admin.ModelAdmin):
 class FillingIngredientInline(admin.TabularInline):
     model = FillingIngredient
     extra = 1
-    fields = ('raw_product', 'quantity', 'unit', 'notes')
+    fields = ('raw_product', 'quantity', 'notes')
     verbose_name = "Ingrediente"
     verbose_name_plural = "Ingredientes"
 
@@ -442,7 +442,7 @@ class FillingAdmin(admin.ModelAdmin):
 class ToppingIngredientInline(admin.TabularInline):
     model = ToppingIngredient
     extra = 1
-    fields = ('raw_product', 'quantity', 'unit', 'notes')
+    fields = ('raw_product', 'quantity', 'notes')
     verbose_name = "Ingrediente"
     verbose_name_plural = "Ingredientes"
 

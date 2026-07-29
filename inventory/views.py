@@ -600,13 +600,12 @@ def base_bread_add_ingredient(request, pk):
     b = get_object_or_404(BaseBread, pk=pk)
     rp_id = request.POST.get('raw_product')
     qty = request.POST.get('quantity', '0')
-    unit = request.POST.get('unit', 'g')
     notes = request.POST.get('notes', '').strip()
     if rp_id and Decimal(qty) > 0:
         BaseBreadIngredient.objects.update_or_create(
             base_bread=b,
             raw_product_id=rp_id,
-            defaults={'quantity': qty, 'unit': unit, 'notes': notes},
+            defaults={'quantity': qty, 'notes': notes},
         )
         messages.success(request, 'Ingrediente agregado.')
     return redirect('base_bread_edit', pk=b.pk)
@@ -627,12 +626,10 @@ def base_bread_edit_ingredient(request, pk, ing_pk):
     ing = get_object_or_404(BaseBreadIngredient, pk=ing_pk, base_bread_id=pk)
     rp_id = request.POST.get('raw_product')
     qty = request.POST.get('quantity', '0')
-    unit = request.POST.get('unit', 'g')
     notes = request.POST.get('notes', '').strip()
     if rp_id and Decimal(qty) > 0:
         ing.raw_product_id = rp_id
         ing.quantity = qty
-        ing.unit = unit
         ing.notes = notes
         ing.save()
         messages.success(request, 'Ingrediente actualizado.')
@@ -699,13 +696,12 @@ def filling_add_ingredient(request, pk):
     f = get_object_or_404(Filling, pk=pk)
     rp_id = request.POST.get('raw_product')
     qty = request.POST.get('quantity', '0')
-    unit = request.POST.get('unit', 'g')
     notes = request.POST.get('notes', '').strip()
     if rp_id and Decimal(qty) > 0:
         FillingIngredient.objects.update_or_create(
             filling=f,
             raw_product_id=rp_id,
-            defaults={'quantity': qty, 'unit': unit, 'notes': notes},
+            defaults={'quantity': qty, 'notes': notes},
         )
         messages.success(request, 'Ingrediente agregado.')
     return redirect('filling_edit', pk=f.pk)
@@ -726,12 +722,10 @@ def filling_edit_ingredient(request, pk, ing_pk):
     ing = get_object_or_404(FillingIngredient, pk=ing_pk, filling_id=pk)
     rp_id = request.POST.get('raw_product')
     qty = request.POST.get('quantity', '0')
-    unit = request.POST.get('unit', 'g')
     notes = request.POST.get('notes', '').strip()
     if rp_id and Decimal(qty) > 0:
         ing.raw_product_id = rp_id
         ing.quantity = qty
-        ing.unit = unit
         ing.notes = notes
         ing.save()
         messages.success(request, 'Ingrediente actualizado.')
@@ -798,13 +792,12 @@ def topping_add_ingredient(request, pk):
     t = get_object_or_404(Topping, pk=pk)
     rp_id = request.POST.get('raw_product')
     qty = request.POST.get('quantity', '0')
-    unit = request.POST.get('unit', 'g')
     notes = request.POST.get('notes', '').strip()
     if rp_id and Decimal(qty) > 0:
         ToppingIngredient.objects.update_or_create(
             topping=t,
             raw_product_id=rp_id,
-            defaults={'quantity': qty, 'unit': unit, 'notes': notes},
+            defaults={'quantity': qty, 'notes': notes},
         )
         messages.success(request, 'Ingrediente agregado.')
     return redirect('topping_edit', pk=t.pk)
@@ -825,12 +818,10 @@ def topping_edit_ingredient(request, pk, ing_pk):
     ing = get_object_or_404(ToppingIngredient, pk=ing_pk, topping_id=pk)
     rp_id = request.POST.get('raw_product')
     qty = request.POST.get('quantity', '0')
-    unit = request.POST.get('unit', 'g')
     notes = request.POST.get('notes', '').strip()
     if rp_id and Decimal(qty) > 0:
         ing.raw_product_id = rp_id
         ing.quantity = qty
-        ing.unit = unit
         ing.notes = notes
         ing.save()
         messages.success(request, 'Ingrediente actualizado.')
