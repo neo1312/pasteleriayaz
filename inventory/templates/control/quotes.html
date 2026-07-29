@@ -2,8 +2,7 @@
 {% block title %}Cotizaciones - Pastelería Yaz{% endblock %}
 {% block page_title %}📋 Cotizaciones{% endblock %}
 {% block header_actions %}
-<a href="{% url 'quote_maker' %}" class="btn btn-primary">+ Nueva</a>
-<a href="{% url 'product_quick_create' %}" class="btn btn-success">🚀 Cotización Rápida</a>
+<a href="{% url 'product_quick_create' %}" class="btn btn-success">+ Nueva Cotización</a>
 {% endblock %}
 
 {% block content %}
@@ -51,7 +50,7 @@
     <div class="empty-state">
         <div class="icon">📋</div>
         <h3>No hay cotizaciones{% if status_filter %} en este estado{% endif %}</h3>
-        <p><a href="{% url 'quote_maker' %}">Crear primera cotización</a></p>
+        <p><a href="{% url 'product_quick_create' %}">Crear primera cotización</a></p>
     </div>
     {% endif %}
 </div>

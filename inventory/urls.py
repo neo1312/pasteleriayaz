@@ -101,7 +101,6 @@ urlpatterns = [
 
     # Cotizaciones (admin)
     path('cotizaciones/', views.quotes_list, name='quotes_list'),
-    path('cotizaciones/nueva/', views.quote_maker, name='quote_maker'),
     path('cotizaciones/<int:pk>/editar/', views.quote_edit, name='quote_edit'),
     path('cotizaciones/<int:pk>/eliminar/', views.quote_delete, name='quote_delete'),
     path('cotizaciones/<int:pk>/enviar/', views.quote_send, name='quote_send'),

@@ -63,52 +63,6 @@ def control_dashboard(request):
     return render(request, 'control/dashboard.html', context)
 
 
-# ── Quote maker ──────────────────────────────────────────────────────────────
-
-@login_required
-def quote_maker(request):
-    if request.method == 'POST':
-        try:
-            product = Product.objects.get(id=request.POST['product'], is_available=True)
-            client = Client.objects.get(id=request.POST['client'])
-            persons = int(request.POST['persons'])
-        except (ValueError, KeyError, Product.DoesNotExist, Client.DoesNotExist):
-            return JsonResponse({'error': 'Datos inválidos'}, status=400)
-
-        tier_id = request.POST.get('complexity_tier')
-        original_tier = product.complexity_tier
-        if tier_id:
-            try:
-                product.complexity_tier = ComplexityTier.objects.get(id=tier_id)
-            except ComplexityTier.DoesNotExist:
-                pass
-
-        quote = Quote(
-            client=client,
-            product=product,
-            persons=persons,
-            design_notes=request.POST.get('design_notes', '').strip(),
-            delivery_cost=Decimal(request.POST.get('delivery_cost', '0')),
-            due_date=request.POST.get('due_date', None) or None,
-        )
-        quote.recalculate()
-        quote.save()
-
-        product.complexity_tier = original_tier
-
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'id': quote.id, 'status': 'ok'})
-
-        messages.success(request, f'Cotización #{quote.id} creada.')
-        return redirect('quotes_list')
-
-    return render(request, 'control/quote_maker.html', {
-        'products': Product.objects.filter(is_available=True).order_by('name'),
-        'tiers': ComplexityTier.objects.all(),
-        'clients': Client.objects.order_by('name'),
-    })
-
-
 @login_required
 def quote_edit(request, pk):
     quote = get_object_or_404(Quote, pk=pk)
@@ -127,7 +81,7 @@ def quote_edit(request, pk):
         except (ValueError, KeyError):
             messages.error(request, 'Datos inválidos.')
 
-    return render(request, 'control/quote_maker.html', {
+    return render(request, 'control/quote_form.html', {
         'products': Product.objects.filter(is_available=True).order_by('name'),
         'tiers': ComplexityTier.objects.all(),
         'clients': Client.objects.order_by('name'),

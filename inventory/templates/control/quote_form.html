@@ -1,0 +1,140 @@
+{% extends 'control/base.html' %}
+{% block title %}{% if quote %}Editar Cotización #{{ quote.id }}{% else %}Nueva Cotización{% endif %} - Pastelería Yaz{% endblock %}
+{% block page_title %}{% if quote %}✏️ Editar Cotización #{{ quote.id }}{% else %}📄 Nueva Cotización{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+    .maker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start; }
+    .price-display { padding: 10px 0; }
+    .price-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95em; color: #555; }
+    .price-row.total { border-top: 2px solid #d4a373; margin-top: 8px; padding-top: 12px; font-weight: 700; color: #3d2817; font-size: 1.15em; }
+    .price-row .value { font-weight: 600; }
+    @media (max-width: 768px) { .maker-grid { grid-template-columns: 1fr; } }
+</style>
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="maker-grid">
+        <div class="card">
+            <h3 style="margin-bottom:20px;">📋 Parámetros</h3>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Producto</label>
+                <select name="product" required onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Seleccionar producto —</option>
+                    {% for p in products %}
+                    <option value="{{ p.id }}" data-min="{{ p.min_persons|default:1 }}" data-max="{{ p.max_persons|default:1000 }}" {% if quote and quote.product.id == p.id %}selected{% endif %}>
+                        {{ p.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Cliente</label>
+                <select name="client" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Seleccionar cliente —</option>
+                    {% for c in clients %}
+                    <option value="{{ c.id }}" {% if quote and quote.client.id == c.id %}selected{% endif %}>{{ c.name }} — {{ c.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas</label>
+                <input type="number" name="persons" value="{{ quote.persons|default:1 }}" min="1" max="1000" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                <small id="persons_hint" style="color:#999;font-size:0.85em;"></small>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nivel de Complejidad</label>
+                <select name="complexity_tier" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Predeterminado del producto —</option>
+                    {% for t in tiers %}
+                    <option value="{{ t.id }}" {% if quote and quote.product.complexity_tier_id == t.id %}selected{% endif %}>{{ t.name }} (+{{ t.surcharge_percentage }}%)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Notas de diseño</label>
+                <textarea name="design_notes" placeholder="Decoración, colores, mensaje personalizado..." style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;">{{ quote.design_notes|default:'' }}</textarea>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Costo de envío</label>
+                    <input type="number" name="delivery_cost" value="{{ quote.delivery_cost|default:0 }}" step="0.01" min="0" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Vence</label>
+                    <input type="date" name="due_date" value="{{ quote.due_date|date:'Y-m-d'|default:'' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3 style="margin-bottom:20px;">💰 Desglose de Precio</h3>
+                <div class="price-display" id="priceDisplay">
+                    <div class="empty-state">
+                        <h3>Selecciona un producto</h3>
+                        <p>Los precios se actualizarán automáticamente.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="width:100%;padding:14px;font-size:1.05em;margin-top:10px;">
+                {% if quote %}💾 Guardar Cambios{% else %}💾 Crear Cotización{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+
+<script>
+    function updatePrice() {
+        const productId = document.querySelector('[name="product"]').value;
+        const persons = parseInt(document.querySelector('[name="persons"]').value) || 1;
+        const tierId = document.querySelector('[name="complexity_tier"]').value;
+        const deliveryCost = parseFloat(document.querySelector('[name="delivery_cost"]').value) || 0;
+        const display = document.getElementById('priceDisplay');
+
+        if (!productId) {
+            display.innerHTML = `<div class="empty-state"><h3>Selecciona un producto</h3><p>Los precios se actualizarán automáticamente.</p></div>`;
+            return;
+        }
+
+        const sel = document.querySelector('[name="product"]');
+        const opt = sel.options[sel.selectedIndex];
+        const min = parseInt(opt.dataset.min) || 1;
+        const max = parseInt(opt.dataset.max) || 1000;
+        document.getElementById('persons_hint').textContent = `Mín: ${min} · Máx: ${max}`;
+
+        const url = `/api/calcular-precio/?product=${productId}&persons=${persons}${tierId ? '&complexity_tier=' + tierId : ''}`;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { display.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${data.error}</p></div>`; return; }
+                const total = parseFloat(data.total);
+                const grandTotal = total + deliveryCost;
+                display.innerHTML = `
+                    <div class="price-row"><span>🧾 Ingredientes</span><span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span></div>
+                    <div class="price-row"><span>👨‍🍳 Mano de obra</span><span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span></div>
+                    <div class="price-row"><span>🎨 Recargo por diseño</span><span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span></div>
+                    <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.price_per_person).toFixed(2)}</span></div>
+                    <div class="price-row total"><span>📦 Subtotal (${persons} pers.)</span><span class="value">$${total.toFixed(2)}</span></div>
+                    ${deliveryCost > 0 ? `<div class="price-row"><span>🚚 Envío</span><span class="value">+$${deliveryCost.toFixed(2)}</span></div>
+                    <div class="price-row total"><span>🏆 Gran Total</span><span class="value">$${grandTotal.toFixed(2)}</span></div>` : ''}
+                `;
+            })
+            .catch(err => { display.innerHTML = `<div class="empty-state"><h3>Error de conexión</h3><p>${err}</p></div>`; });
+    }
+
+    {% if quote %}
+    window.addEventListener('DOMContentLoaded', function() {
+        updatePrice();
+    });
+    {% endif %}
+</script>
+{% endblock %}
