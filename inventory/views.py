@@ -621,6 +621,24 @@ def base_bread_delete_ingredient(request, pk, ing_pk):
     return redirect('base_bread_edit', pk=pk)
 
 
+@login_required
+@require_POST
+def base_bread_edit_ingredient(request, pk, ing_pk):
+    ing = get_object_or_404(BaseBreadIngredient, pk=ing_pk, base_bread_id=pk)
+    rp_id = request.POST.get('raw_product')
+    qty = request.POST.get('quantity', '0')
+    unit = request.POST.get('unit', 'g')
+    notes = request.POST.get('notes', '').strip()
+    if rp_id and Decimal(qty) > 0:
+        ing.raw_product_id = rp_id
+        ing.quantity = qty
+        ing.unit = unit
+        ing.notes = notes
+        ing.save()
+        messages.success(request, 'Ingrediente actualizado.')
+    return redirect('base_bread_edit', pk=pk)
+
+
 # ── Filling CRUD ─────────────────────────────────────────────────────────────
 
 @login_required
@@ -702,6 +720,24 @@ def filling_delete_ingredient(request, pk, ing_pk):
     return redirect('filling_edit', pk=pk)
 
 
+@login_required
+@require_POST
+def filling_edit_ingredient(request, pk, ing_pk):
+    ing = get_object_or_404(FillingIngredient, pk=ing_pk, filling_id=pk)
+    rp_id = request.POST.get('raw_product')
+    qty = request.POST.get('quantity', '0')
+    unit = request.POST.get('unit', 'g')
+    notes = request.POST.get('notes', '').strip()
+    if rp_id and Decimal(qty) > 0:
+        ing.raw_product_id = rp_id
+        ing.quantity = qty
+        ing.unit = unit
+        ing.notes = notes
+        ing.save()
+        messages.success(request, 'Ingrediente actualizado.')
+    return redirect('filling_edit', pk=pk)
+
+
 # ── Topping CRUD ─────────────────────────────────────────────────────────────
 
 @login_required
@@ -780,6 +816,24 @@ def topping_delete_ingredient(request, pk, ing_pk):
     ing = get_object_or_404(ToppingIngredient, pk=ing_pk, topping_id=pk)
     ing.delete()
     messages.success(request, 'Ingrediente eliminado.')
+    return redirect('topping_edit', pk=pk)
+
+
+@login_required
+@require_POST
+def topping_edit_ingredient(request, pk, ing_pk):
+    ing = get_object_or_404(ToppingIngredient, pk=ing_pk, topping_id=pk)
+    rp_id = request.POST.get('raw_product')
+    qty = request.POST.get('quantity', '0')
+    unit = request.POST.get('unit', 'g')
+    notes = request.POST.get('notes', '').strip()
+    if rp_id and Decimal(qty) > 0:
+        ing.raw_product_id = rp_id
+        ing.quantity = qty
+        ing.unit = unit
+        ing.notes = notes
+        ing.save()
+        messages.success(request, 'Ingrediente actualizado.')
     return redirect('topping_edit', pk=pk)
 
 

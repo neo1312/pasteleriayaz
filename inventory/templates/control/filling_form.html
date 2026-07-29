@@ -34,20 +34,27 @@
 <div class="card" style="margin-top:20px;">
     <h3>Ingredientes (por porción)</h3>
     {% if ingredients %}
-    <table>
+    <table id="ingredients-table">
         <thead><tr><th>Materia prima</th><th>Cantidad</th><th>Unidad</th><th>Notas</th><th></th></tr></thead>
         <tbody>
             {% for ing in ingredients %}
-            <tr>
-                <td>{{ ing.raw_product.name }}</td>
-                <td>{{ ing.quantity }}</td>
-                <td>{{ ing.get_unit_display }}</td>
-                <td>{{ ing.notes|default:'—' }}</td>
+            <tr id="ing-{{ ing.pk }}" data-raw-product-id="{{ ing.raw_product_id }}" data-quantity="{{ ing.quantity }}" data-unit="{{ ing.unit }}" data-notes="{{ ing.notes|default:'' }}">
+                <td class="view-cell">{{ ing.raw_product.name }}</td>
+                <td class="view-cell">{{ ing.quantity }}</td>
+                <td class="view-cell">{{ ing.get_unit_display }}</td>
+                <td class="view-cell">{{ ing.notes|default:'—' }}</td>
                 <td>
-                    <form method="post" action="{% url 'filling_delete_ingredient' object.pk ing.pk %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este ingrediente?')">Eliminar</button>
-                    </form>
+                    <div class="view-actions">
+                        <button type="button" class="btn btn-sm btn-outline" onclick="editRow('{{ ing.pk }}')">Editar</button>
+                        <form method="post" action="{% url 'filling_delete_ingredient' object.pk ing.pk %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este ingrediente?')">Eliminar</button>
+                        </form>
+                    </div>
+                    <div class="edit-actions" style="display:none;">
+                        <button type="button" class="btn btn-sm btn-success" onclick="saveRow('{{ ing.pk }}', '{% url "filling_edit_ingredient" object.pk ing.pk %}')">Guardar</button>
+                        <button type="button" class="btn btn-sm btn-outline" onclick="cancelEdit('{{ ing.pk }}')">Cancelar</button>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
@@ -92,4 +99,55 @@
     </form>
 </div>
 {% endif %}
+
+<script>
+const unitLabels = {'g': 'Gramos', 'mg': 'Miligramos', 'pcs': 'Piezas'};
+const rawProducts = [
+    {% for rp in raw_products %}{id: {{ rp.id }}, name: '{{ rp.name|escapejs }}'},{% endfor %}
+];
+
+function editRow(pk) {
+    const row = document.getElementById('ing-' + pk);
+    const cells = row.querySelectorAll('.view-cell');
+    const vals = [row.dataset.rawProductId, row.dataset.quantity, row.dataset.unit, row.dataset.notes];
+
+    const rpOpts = rawProducts.map(r => `<option value="${r.id}" ${r.id == vals[0] ? 'selected' : ''}>${r.name}</option>`).join('');
+    const unitOpts = Object.entries(unitLabels).map(([k, v]) => `<option value="${k}" ${k == vals[2] ? 'selected' : ''}>${v}</option>`).join('');
+
+    cells[0].innerHTML = `<select class="edit-rp" style="width:100%;padding:6px;border:2px solid #e8d4c0;border-radius:6px;">${rpOpts}</select>`;
+    cells[1].innerHTML = `<input type="number" class="edit-qty" value="${vals[1]}" step="0.001" min="0.001" style="width:100%;padding:6px;border:2px solid #e8d4c0;border-radius:6px;">`;
+    cells[2].innerHTML = `<select class="edit-unit" style="width:100%;padding:6px;border:2px solid #e8d4c0;border-radius:6px;">${unitOpts}</select>`;
+    cells[3].innerHTML = `<input type="text" class="edit-notes" value="${vals[3]}" style="width:100%;padding:6px;border:2px solid #e8d4c0;border-radius:6px;">`;
+
+    row.querySelector('.view-actions').style.display = 'none';
+    row.querySelector('.edit-actions').style.display = '';
+}
+
+function saveRow(pk, url) {
+    const row = document.getElementById('ing-' + pk);
+    const rp = row.querySelector('.edit-rp').value;
+    const qty = row.querySelector('.edit-qty').value;
+    const unit = row.querySelector('.edit-unit').value;
+    const notes = row.querySelector('.edit-notes').value;
+
+    const data = new URLSearchParams();
+    data.append('raw_product', rp);
+    data.append('quantity', qty);
+    data.append('unit', unit);
+    data.append('notes', notes);
+
+    fetch(url, {method: 'POST', body: data, headers: {'X-CSRFToken': getCookie('csrftoken')}})
+        .then(() => location.reload())
+        .catch(() => location.reload());
+}
+
+function cancelEdit(pk) {
+    location.reload();
+}
+
+function getCookie(name) {
+    let c = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return c ? c[2] : null;
+}
+</script>
 {% endblock %}

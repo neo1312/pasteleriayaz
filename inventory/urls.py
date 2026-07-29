@@ -50,6 +50,7 @@ urlpatterns = [
     path('bases/<int:pk>/editar/', views.base_bread_edit, name='base_bread_edit'),
     path('bases/<int:pk>/eliminar/', views.base_bread_delete, name='base_bread_delete'),
     path('bases/<int:pk>/ingredientes/agregar/', views.base_bread_add_ingredient, name='base_bread_add_ingredient'),
+    path('bases/<int:pk>/ingredientes/<int:ing_pk>/editar/', views.base_bread_edit_ingredient, name='base_bread_edit_ingredient'),
     path('bases/<int:pk>/ingredientes/<int:ing_pk>/eliminar/', views.base_bread_delete_ingredient, name='base_bread_delete_ingredient'),
 
     # Rellenos
@@ -58,6 +59,7 @@ urlpatterns = [
     path('rellenos/<int:pk>/editar/', views.filling_edit, name='filling_edit'),
     path('rellenos/<int:pk>/eliminar/', views.filling_delete, name='filling_delete'),
     path('rellenos/<int:pk>/ingredientes/agregar/', views.filling_add_ingredient, name='filling_add_ingredient'),
+    path('rellenos/<int:pk>/ingredientes/<int:ing_pk>/editar/', views.filling_edit_ingredient, name='filling_edit_ingredient'),
     path('rellenos/<int:pk>/ingredientes/<int:ing_pk>/eliminar/', views.filling_delete_ingredient, name='filling_delete_ingredient'),
 
     # Cubiertas
@@ -66,6 +68,7 @@ urlpatterns = [
     path('cubiertas/<int:pk>/editar/', views.topping_edit, name='topping_edit'),
     path('cubiertas/<int:pk>/eliminar/', views.topping_delete, name='topping_delete'),
     path('cubiertas/<int:pk>/ingredientes/agregar/', views.topping_add_ingredient, name='topping_add_ingredient'),
+    path('cubiertas/<int:pk>/ingredientes/<int:ing_pk>/editar/', views.topping_edit_ingredient, name='topping_edit_ingredient'),
     path('cubiertas/<int:pk>/ingredientes/<int:ing_pk>/eliminar/', views.topping_delete_ingredient, name='topping_delete_ingredient'),
 
     # Marcas
