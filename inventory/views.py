@@ -173,6 +173,7 @@ def quote_approve(request, pk):
             design_surcharge=quote.design_surcharge,
             labor_cost=quote.labor_cost,
             total_price=quote.total_price,
+            delivery_cost=quote.delivery_cost,
             notes=f"Convertido de Cotización #{quote.pk}",
         )
         messages.success(request, f'Cotización #{quote.pk} aprobada. Pedido creado.')

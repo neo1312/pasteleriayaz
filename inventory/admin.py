@@ -300,6 +300,7 @@ class QuoteAdmin(admin.ModelAdmin):
             design_surcharge=quote.design_surcharge,
             labor_cost=quote.labor_cost,
             total_price=quote.total_price,
+            delivery_cost=quote.delivery_cost,
             status='pending',
             notes=f"Convertido de Cotización #{quote.pk}. {quote.notes or ''}".strip(),
         )
