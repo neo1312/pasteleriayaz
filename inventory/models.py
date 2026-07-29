@@ -424,7 +424,7 @@ class RawProduct(models.Model):
     ]
 
     name = models.CharField(max_length=200, verbose_name="Nombre")
-    old_brand = models.CharField(max_length=200, blank=True, default='', verbose_name="Marca (anterior)")
+    old_brand = models.CharField(max_length=200, blank=True, help_text="Marca o fabricante", verbose_name="Marca (anterior)")
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Marca")
     description = models.TextField(blank=True, verbose_name="Descripción")
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg', verbose_name="Unidad")
