@@ -1,0 +1,113 @@
+{% extends 'control/base.html' %}
+{% block title %}Creación Rápida de Pastel - Pastelería Yaz{% endblock %}
+{% block page_title %}🚀 Creación Rápida de Pastel{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+    <form method="post">
+        {% csrf_token %}
+        <div class="grid-2">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre del pastel</label>
+                <input type="text" name="name" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Precio</label>
+                <input type="number" name="price" value="0" step="0.01" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+        </div>
+
+        <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
+            <h4 style="margin-bottom:12px;color:#3d2817;">🍰 Componentes del Pastel</h4>
+            <div class="grid-3">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Base</label>
+                    <select name="base_bread" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Seleccionar —</option>
+                        {% for b in breads %}
+                        <option value="{{ b.id }}">{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Relleno</label>
+                    <select name="filling" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Sin relleno —</option>
+                        {% for f in fillings %}
+                        <option value="{{ f.id }}">{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Cubierta</label>
+                    <select name="topping" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Sin cubierta —</option>
+                        {% for t in toppings %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nivel de Complejidad (Diseño)</label>
+                <select name="complexity_tier" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                    <option value="">— Sin complejidad —</option>
+                    {% for t in tiers %}
+                    <option value="{{ t.id }}">{{ t.name }} (+{{ t.surcharge_percentage }}%)</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
+            <h4 style="margin-bottom:12px;color:#3d2817;">🖼️ Galería y Metadata</h4>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción corta (para galería)</label>
+                <input type="text" name="short_description" maxlength="300" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción de diseño</label>
+                <textarea name="design_description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;"></textarea>
+            </div>
+            <div class="grid-2">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Esquema de colores</label>
+                    <input type="text" name="color_scheme" placeholder="Ej: rosa, dorado, blanco" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Género</label>
+                    <select name="gender" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Seleccionar —</option>
+                        <option value="nino">Niño</option>
+                        <option value="nina">Niña</option>
+                        <option value="hombre">Hombre</option>
+                        <option value="mujer">Mujer</option>
+                        <option value="unisex">Unisex</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Etiquetas de evento</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    {% for t in tags %}
+                    <label style="display:flex;align-items:center;gap:4px;font-size:0.9em;cursor:pointer;">
+                        <input type="checkbox" name="event_tags" value="{{ t.id }}"> {{ t.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                <input type="checkbox" name="show_in_gallery"> Mostrar en galería
+            </label>
+        </div>
+
+        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
+            <button type="submit" class="btn btn-success">🚀 Crear Pastel</button>
+            <a href="{% url 'product_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

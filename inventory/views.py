@@ -9,17 +9,29 @@ from django.db.models import Sum, Count, Q, F
 from decimal import Decimal
 from datetime import datetime, timedelta
 import json
-from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient
+from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag
 
 
 def product_gallery(request):
+    products = Product.objects.filter(is_available=True, show_in_gallery=True)
     category = request.GET.get('category')
+    tag_id = request.GET.get('tag')
+    gender = request.GET.get('gender')
     if category:
-        products = Product.objects.filter(is_available=True, category=category).order_by('name')
-    else:
-        products = Product.objects.filter(is_available=True).order_by('name')
+        products = products.filter(category=category)
+    if tag_id:
+        products = products.filter(event_tags__id=tag_id)
+    if gender:
+        products = products.filter(gender=gender)
+    products = products.order_by('name')
     categories = Product.CATEGORY_CHOICES
-    return render(request, 'inventory/gallery.html', {'products': products, 'categories': categories, 'selected_category': category})
+    event_tags = EventTag.objects.order_by('name')
+    return render(request, 'inventory/gallery.html', {
+        'products': products, 'categories': categories,
+        'selected_category': category, 'event_tags': event_tags,
+        'selected_tag': int(tag_id) if tag_id else None,
+        'selected_gender': gender,
+    })
 
 
 def product_detail(request, product_id):
@@ -203,17 +215,23 @@ def product_create(request):
     fillings = Filling.objects.filter(is_available=True)
     toppings = Topping.objects.filter(is_available=True)
     brands = Brand.objects.order_by('name')
+    tags = EventTag.objects.order_by('name')
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         if not name:
             messages.error(request, 'El nombre es obligatorio.')
-            return render(request, 'control/product_form.html', {'form': request.POST, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands})
+            return render(request, 'control/product_form.html', {'form': request.POST, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands, 'tags': tags})
         product = Product(
             name=name,
             category=request.POST.get('category', 'other'),
             description=request.POST.get('description', ''),
+            short_description=request.POST.get('short_description', ''),
             price=Decimal(request.POST.get('price', '0')),
             is_available=request.POST.get('is_available') == 'on',
+            show_in_gallery=request.POST.get('show_in_gallery') == 'on',
+            design_description=request.POST.get('design_description', ''),
+            color_scheme=request.POST.get('color_scheme', ''),
+            gender=request.POST.get('gender', ''),
         )
         if request.POST.get('base_bread'):
             product.base_bread_id = int(request.POST['base_bread'])
@@ -232,9 +250,12 @@ def product_create(request):
         if request.POST.get('max_persons'):
             product.max_persons = int(request.POST['max_persons'])
         product.save()
+        event_tag_ids = request.POST.getlist('event_tags')
+        if event_tag_ids:
+            product.event_tags.set(EventTag.objects.filter(id__in=event_tag_ids))
         messages.success(request, f'Producto "{product.name}" creado.')
         return redirect('product_list')
-    return render(request, 'control/product_form.html', {'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands})
+    return render(request, 'control/product_form.html', {'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands, 'tags': tags})
 
 
 @login_required
@@ -245,10 +266,12 @@ def product_edit(request, pk):
     fillings = Filling.objects.filter(is_available=True)
     toppings = Topping.objects.filter(is_available=True)
     brands = Brand.objects.order_by('name')
+    tags = EventTag.objects.order_by('name')
     if request.method == 'POST':
         product.name = request.POST.get('name', product.name)
         product.category = request.POST.get('category', product.category)
         product.description = request.POST.get('description', product.description)
+        product.short_description = request.POST.get('short_description', product.short_description or '')
         product.price = Decimal(request.POST.get('price', '0'))
         product.base_bread_id = request.POST.get('base_bread') or None
         product.filling_id = request.POST.get('filling') or None
@@ -259,10 +282,23 @@ def product_edit(request, pk):
         product.min_persons = int(request.POST.get('min_persons', '1'))
         product.max_persons = int(request.POST.get('max_persons', '100'))
         product.is_available = request.POST.get('is_available') == 'on'
+        product.show_in_gallery = request.POST.get('show_in_gallery') == 'on'
+        product.design_description = request.POST.get('design_description', product.design_description or '')
+        product.color_scheme = request.POST.get('color_scheme', product.color_scheme or '')
+        product.gender = request.POST.get('gender', product.gender or '')
         product.save()
+        event_tag_ids = request.POST.getlist('event_tags')
+        if event_tag_ids:
+            product.event_tags.set(EventTag.objects.filter(id__in=event_tag_ids))
+        else:
+            product.event_tags.clear()
         messages.success(request, f'Producto "{product.name}" actualizado.')
         return redirect('product_list')
-    return render(request, 'control/product_form.html', {'form': product, 'object': product, 'tiers': tiers, 'breads': breads, 'fillings': fillings, 'toppings': toppings, 'brands': brands})
+    return render(request, 'control/product_form.html', {
+        'form': product, 'object': product, 'tiers': tiers,
+        'breads': breads, 'fillings': fillings, 'toppings': toppings,
+        'brands': brands, 'tags': tags,
+    })
 
 
 @login_required
@@ -831,6 +867,99 @@ def brand_delete(request, pk):
         messages.success(request, 'Marca eliminada.')
         return redirect('brand_list')
     return render(request, 'control/confirm_delete.html', {'object': b, 'cancel_url': 'brand_list'})
+
+
+# ── EventTags CRUD ──────────────────────────────────────────────────────────
+
+@login_required
+def event_tag_list(request):
+    tags = EventTag.objects.order_by('name')
+    search = request.GET.get('search', '')
+    if search:
+        tags = tags.filter(name__icontains=search)
+    return render(request, 'control/eventtag_list.html', {'tags': tags, 'search': search})
+
+
+@login_required
+def event_tag_create(request):
+    if request.method == 'POST':
+        t = EventTag(
+            name=request.POST.get('name', '').strip(),
+        )
+        t.save()
+        messages.success(request, f'Etiqueta "{t.name}" creada.')
+        return redirect('event_tag_list')
+    return render(request, 'control/eventtag_form.html')
+
+
+@login_required
+def event_tag_edit(request, pk):
+    t = get_object_or_404(EventTag, pk=pk)
+    if request.method == 'POST':
+        t.name = request.POST.get('name', t.name)
+        t.save()
+        messages.success(request, f'Etiqueta "{t.name}" actualizada.')
+        return redirect('event_tag_list')
+    return render(request, 'control/eventtag_form.html', {'object': t})
+
+
+@login_required
+def event_tag_delete(request, pk):
+    t = get_object_or_404(EventTag, pk=pk)
+    if request.method == 'POST':
+        t.delete()
+        messages.success(request, 'Etiqueta eliminada.')
+        return redirect('event_tag_list')
+    return render(request, 'control/confirm_delete.html', {'object': t, 'cancel_url': 'event_tag_list'})
+
+
+# ── Quick Create ─────────────────────────────────────────────────────────────
+
+@login_required
+def product_quick_create(request):
+    breads = BaseBread.objects.filter(is_available=True)
+    fillings = Filling.objects.filter(is_available=True)
+    toppings = Topping.objects.filter(is_available=True)
+    tiers = ComplexityTier.objects.all()
+    tags = EventTag.objects.order_by('name')
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if not name:
+            messages.error(request, 'El nombre es obligatorio.')
+            return render(request, 'control/product_quick_create.html', {
+                'breads': breads, 'fillings': fillings, 'toppings': toppings,
+                'tiers': tiers, 'tags': tags,
+            })
+        product = Product(
+            name=name,
+            category='cake',
+            description=request.POST.get('description', ''),
+            short_description=request.POST.get('short_description', ''),
+            price=Decimal(request.POST.get('price', '0')),
+            is_available=True,
+            show_in_gallery=request.POST.get('show_in_gallery') == 'on',
+            design_description=request.POST.get('design_description', ''),
+            color_scheme=request.POST.get('color_scheme', ''),
+            gender=request.POST.get('gender', ''),
+        )
+        if request.POST.get('base_bread'):
+            product.base_bread_id = int(request.POST['base_bread'])
+        if request.POST.get('filling'):
+            product.filling_id = int(request.POST['filling'])
+        if request.POST.get('topping'):
+            product.topping_id = int(request.POST['topping'])
+        if request.POST.get('complexity_tier'):
+            product.complexity_tier_id = int(request.POST['complexity_tier'])
+        product.save()
+        event_tag_ids = request.POST.getlist('event_tags')
+        if event_tag_ids:
+            product.event_tags.set(EventTag.objects.filter(id__in=event_tag_ids))
+        messages.success(request, f'Producto "{product.name}" creado.')
+        return redirect('product_list')
+    return render(request, 'control/product_quick_create.html', {
+        'breads': breads, 'fillings': fillings, 'toppings': toppings,
+        'tiers': tiers, 'tags': tags,
+    })
 
 
 # ── Purchases CRUD ───────────────────────────────────────────────────────────

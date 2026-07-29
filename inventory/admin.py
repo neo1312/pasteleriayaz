@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django import forms
 from django.shortcuts import render
 from django.utils.formats import number_format
-from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient, Brand
+from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient, Brand, EventTag
 
 
 class IngredientInline(admin.TabularInline):
@@ -368,6 +368,12 @@ class BrandAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Información', {'fields': ('name', 'description')}),
     )
+
+
+@admin.register(EventTag)
+class EventTagAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
 
 
 @admin.register(TransportZone)

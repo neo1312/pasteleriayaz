@@ -283,20 +283,36 @@
 
     <div class="container">
         <div class="filters">
-            <a href="{% url 'gallery' %}" class="filter-btn {% if not selected_category %}active{% endif %}">
+            <a href="{% url 'gallery' %}" class="filter-btn {% if not selected_category and not selected_tag and not selected_gender %}active{% endif %}">
                 Todos los Productos
             </a>
             {% for value, label in categories %}
-                <a href="?category={{ value }}" class="filter-btn {% if selected_category == value %}active{% endif %}">
+                <a href="?category={{ value }}{% if selected_tag %}&tag={{ selected_tag }}{% endif %}{% if selected_gender %}&gender={{ selected_gender }}{% endif %}" class="filter-btn {% if selected_category == value %}active{% endif %}">
                     {{ label }}
                 </a>
             {% endfor %}
+            {% if event_tags %}
+            <div style="width:100%;margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+                {% for t in event_tags %}
+                <a href="?tag={{ t.id }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_gender %}&gender={{ selected_gender }}{% endif %}" class="filter-btn {% if selected_tag == t.id %}active{% endif %}" style="font-size:0.85em;">
+                    🎉 {{ t.name }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div style="width:100%;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+                <a href="?gender=nino{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_tag %}&tag={{ selected_tag }}{% endif %}" class="filter-btn {% if selected_gender == 'nino' %}active{% endif %}" style="font-size:0.85em;">👦 Niño</a>
+                <a href="?gender=nina{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_tag %}&tag={{ selected_tag }}{% endif %}" class="filter-btn {% if selected_gender == 'nina' %}active{% endif %}" style="font-size:0.85em;">👧 Niña</a>
+                <a href="?gender=hombre{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_tag %}&tag={{ selected_tag }}{% endif %}" class="filter-btn {% if selected_gender == 'hombre' %}active{% endif %}" style="font-size:0.85em;">👨 Hombre</a>
+                <a href="?gender=mujer{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_tag %}&tag={{ selected_tag }}{% endif %}" class="filter-btn {% if selected_gender == 'mujer' %}active{% endif %}" style="font-size:0.85em;">👩 Mujer</a>
+                <a href="?gender=unisex{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_tag %}&tag={{ selected_tag }}{% endif %}" class="filter-btn {% if selected_gender == 'unisex' %}active{% endif %}" style="font-size:0.85em;">👤 Unisex</a>
+            </div>
         </div>
 
         {% if products %}
             <div class="gallery">
                 {% for product in products %}
-                    <div class="product-card" onclick="openProductModal('{{ product.name|escapejs }}', '{% if product.image %}{{ product.image.url }}{% endif %}', '{{ product.get_category_display|escapejs }}', '{{ product.short_description|default:product.description|escapejs }}')">
+                    <div class="product-card" onclick="openProductModal('{{ product.name|escapejs }}', '{% if product.image %}{{ product.image.url }}{% endif %}', '{{ product.get_category_display|escapejs }}', '{{ product.short_description|default:product.description|escapejs }}', '{{ product.design_description|escapejs }}', '{{ product.color_scheme|escapejs }}', '{{ product.get_gender_display|escapejs }}', [{% for t in product.event_tags.all %}'{{ t.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}])">
                         <div class="product-image {% if not product.image %}no-image{% endif %}">
                             {% if product.image %}
                                 <img src="{{ product.image.url }}" alt="{{ product.name }}">
@@ -308,6 +324,19 @@
                             <span class="product-category">{{ product.get_category_display }}</span>
                             <h3 class="product-name">{{ product.name }}</h3>
                             <p class="product-description">{{ product.short_description|default:product.description }}</p>
+                            {% if product.color_scheme or product.gender %}
+                            <div style="margin-top:8px;font-size:0.8em;color:#888;">
+                                {% if product.color_scheme %}🎨 {{ product.color_scheme }}{% endif %}
+                                {% if product.gender %}&nbsp;·&nbsp;{{ product.get_gender_display }}{% endif %}
+                            </div>
+                            {% endif %}
+                            {% if product.event_tags.all %}
+                            <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
+                                {% for t in product.event_tags.all %}
+                                <span style="background:#fae8d6;color:#8b6914;padding:2px 8px;border-radius:12px;font-size:0.7em;">{{ t.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 {% endfor %}
@@ -326,8 +355,10 @@
             <button class="close-btn" onclick="closeProductModal()">✕</button>
             <img id="modalImage" class="modal-image" src="" alt="" style="display:none;">
             <span id="modalCategory" class="modal-category"></span>
+            <div id="modalTags" style="display:inline-block;margin-left:6px;"></div>
             <h2 id="modalName"></h2>
             <p id="modalDesc" class="modal-desc"></p>
+            <div id="modalDesign" style="margin-bottom:16px;font-size:0.9em;color:#555;"></div>
             <a id="modalWhatsapp" class="btn-whatsapp" href="https://wa.me/527751280867?text=Hola!%20Me%20interesa%20el%20producto:%20" target="_blank">
                 📱 Consultar por WhatsApp
             </a>
@@ -341,10 +372,24 @@
     </footer>
 
     <script>
-    function openProductModal(name, image, category, desc) {
+    function openProductModal(name, image, category, desc, design, color, gender, tags) {
         document.getElementById('modalName').textContent = name;
         document.getElementById('modalCategory').textContent = category;
         document.getElementById('modalDesc').textContent = desc;
+        var tagsEl = document.getElementById('modalTags');
+        if (tags && tags.length) {
+            tagsEl.innerHTML = tags.map(function(t) {
+                return '<span style="background:#fae8d6;color:#8b6914;padding:2px 8px;border-radius:12px;font-size:0.7em;margin-right:4px;">' + t + '</span>';
+            }).join('');
+        } else {
+            tagsEl.innerHTML = '';
+        }
+        var designEl = document.getElementById('modalDesign');
+        var designParts = [];
+        if (design) designParts.push('🎨 ' + design);
+        if (color) designParts.push('🌈 ' + color);
+        if (gender) designParts.push('👤 ' + gender);
+        designEl.textContent = designParts.join(' · ');
         var img = document.getElementById('modalImage');
         if (image) {
             img.src = image;

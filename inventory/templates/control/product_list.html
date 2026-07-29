@@ -3,6 +3,7 @@
 {% block page_title %}🧁 Productos{% endblock %}
 {% block header_actions %}
 <a href="{% url 'product_create' %}" class="btn btn-primary">+ Nuevo</a>
+<a href="{% url 'product_quick_create' %}" class="btn btn-success">🚀 Creación Rápida</a>
 {% endblock %}
 
 {% block content %}
@@ -31,6 +32,8 @@
                 <th>Costo</th>
                 <th>Precio</th>
                 <th>Margen</th>
+                <th>Género</th>
+                <th>Galería</th>
                 <th>Disponible</th>
                 <th>Acciones</th>
             </tr>
@@ -53,6 +56,8 @@
                 <td class="amount">${{ p.cost|floatformat:2 }}</td>
                 <td class="amount">${{ p.price|floatformat:2 }}</td>
                 <td class="amount">{{ p.margin_percentage|floatformat:1 }}%</td>
+                <td>{{ p.get_gender_display|default:'—' }}</td>
+                <td>{% if p.show_in_gallery %}✅{% else %}❌{% endif %}</td>
                 <td>{% if p.is_available %}✅{% else %}❌{% endif %}</td>
                 <td class="actions">
                     <a href="{% url 'product_edit' p.id %}" class="btn btn-sm btn-primary">Editar</a>

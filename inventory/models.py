@@ -214,6 +214,18 @@ class Brand(models.Model):
         verbose_name_plural = "Marcas"
 
 
+class EventTag(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Etiqueta de Evento"
+        verbose_name_plural = "Etiquetas de Evento"
+
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
     CATEGORY_CHOICES = [
         ('bread', 'Pan'),
@@ -256,6 +268,11 @@ class Product(models.Model):
     base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
     min_persons = models.PositiveIntegerField(default=1, verbose_name="Personas mínimas")
     max_persons = models.PositiveIntegerField(default=100, verbose_name="Personas máximas")
+    event_tags = models.ManyToManyField('EventTag', blank=True, verbose_name="Etiquetas de evento")
+    design_description = models.TextField(blank=True, verbose_name="Descripción de diseño")
+    color_scheme = models.CharField(max_length=200, blank=True, verbose_name="Esquema de colores")
+    gender = models.CharField(max_length=20, blank=True, choices=[('nino', 'Niño'), ('nina', 'Niña'), ('hombre', 'Hombre'), ('mujer', 'Mujer'), ('unisex', 'Unisex')], verbose_name="Género")
+    show_in_gallery = models.BooleanField(default=False, verbose_name="Mostrar en galería")
 
     def calculate_cost(self):
         """Return ingredient cost for ONE portion (1 person)."""

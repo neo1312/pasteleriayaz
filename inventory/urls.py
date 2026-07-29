@@ -74,6 +74,15 @@ urlpatterns = [
     path('marcas/<int:pk>/editar/', views.brand_edit, name='brand_edit'),
     path('marcas/<int:pk>/eliminar/', views.brand_delete, name='brand_delete'),
 
+    # Etiquetas de Evento
+    path('etiquetas-evento/', views.event_tag_list, name='event_tag_list'),
+    path('etiquetas-evento/nueva/', views.event_tag_create, name='event_tag_create'),
+    path('etiquetas-evento/<int:pk>/editar/', views.event_tag_edit, name='event_tag_edit'),
+    path('etiquetas-evento/<int:pk>/eliminar/', views.event_tag_delete, name='event_tag_delete'),
+
+    # Creación Rápida de Producto
+    path('productos/crear-rapido/', views.product_quick_create, name='product_quick_create'),
+
     # Compras
     path('compras/', views.purchase_list, name='purchase_list'),
     path('compras/nueva/', views.purchase_create, name='purchase_create'),
