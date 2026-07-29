@@ -161,11 +161,11 @@ class ProviderCatalogInline(admin.TabularInline):
 class RawProductAdmin(admin.ModelAdmin):
     list_display  = ('name', 'brand', 'unit', 'cost_per_unit', 'average_cost', 'quantity_in_stock', 'provider')
     list_filter   = ('unit', 'provider', 'brand', 'created_at')
-    search_fields = ('name', 'brand__name', 'old_brand', 'description')
+    search_fields = ('name', 'brand__name', 'description')
     readonly_fields = ('average_cost',)
     inlines = [ProviderCatalogInline]
     fieldsets = (
-        ('Información Básica', {'fields': ('name', 'brand', 'old_brand', 'description', 'provider')}),
+        ('Información Básica', {'fields': ('name', 'brand', 'description', 'provider')}),
         ('Unidades y Costo', {'fields': ('unit', 'cost_per_unit', 'average_cost')}),
         ('Stock', {'fields': ('quantity_in_stock', 'reorder_level')}),
     )
@@ -350,7 +350,7 @@ class QuoteAdmin(admin.ModelAdmin):
 class ProviderCatalogAdmin(admin.ModelAdmin):
     list_display  = ("raw_product", "provider", "unit_price", "updated_at")
     list_filter   = ("provider", "raw_product__brand")
-    search_fields = ("raw_product__name", "raw_product__brand__name", "raw_product__old_brand", "provider__name")
+    search_fields = ("raw_product__name", "raw_product__brand__name", "provider__name")
     readonly_fields = ("updated_at",)
     ordering = ("raw_product", "unit_price")
 

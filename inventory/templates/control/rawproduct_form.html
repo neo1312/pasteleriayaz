@@ -19,7 +19,6 @@
                     <option value="{{ b.id }}" {% if object.brand.id == b.id %}selected{% endif %}>{{ b.name }}</option>
                     {% endfor %}
                 </select>
-                <input type="text" name="old_brand" value="{{ object.old_brand|default:'' }}" placeholder="Marca anterior (texto libre)" style="width:100%;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.85em;outline:none;margin-top:6px;">
             </div>
         </div>
         <div class="grid-3">

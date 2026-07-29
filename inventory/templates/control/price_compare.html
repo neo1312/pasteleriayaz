@@ -64,7 +64,7 @@
                     <option value="">— elige un producto —</option>
                     {% for rp in raw_products %}
                         <option value="{{ rp.pk }}" {% if rp.pk == selected_id %}selected{% endif %}>
-                            {{ rp.name }}{% if rp.brand %} [{{ rp.brand.name }}]{% elif rp.old_brand %} [{{ rp.old_brand }}]{% endif %} ({{ rp.unit }})
+                            {{ rp.name }}{% if rp.brand %} [{{ rp.brand.name }}]{% endif %} ({{ rp.unit }})
                         </option>
                     {% endfor %}
                 </select>
@@ -74,7 +74,7 @@
 
         {% if selected_rp %}
             <div class="info-card">
-                <h2>{{ selected_rp.name }}{% if selected_rp.brand %} — <em>{{ selected_rp.brand.name }}</em>{% elif selected_rp.old_brand %} — <em>{{ selected_rp.old_brand }}</em>{% endif %} <small style="color:#666;font-size:14px;">por {{ selected_rp.unit }}</small></h2>
+                <h2>{{ selected_rp.name }}{% if selected_rp.brand %} — <em>{{ selected_rp.brand.name }}</em>{% endif %} <small style="color:#666;font-size:14px;">por {{ selected_rp.unit }}</small></h2>
                 <div class="sub">
                     <span>Costo promedio: <strong>${{ selected_rp.average_cost|floatformat:6 }}</strong></span>
                     <span>Último costo: <strong>${{ selected_rp.cost_per_unit|floatformat:6 }}</strong></span>

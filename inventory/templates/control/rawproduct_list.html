@@ -20,7 +20,7 @@
             {% for m in materials %}
             <tr>
                 <td><strong>{{ m.name }}</strong></td>
-                <td>{{ m.brand.name|default:m.old_brand|default:'—' }}</td>
+                <td>{{ m.brand.name|default:'—' }}</td>
                 <td>{{ m.unit }}</td>
                 <td class="amount">${{ m.cost_per_unit|floatformat:4 }}</td>
                 <td class="amount">{{ m.quantity_in_stock }}</td>
