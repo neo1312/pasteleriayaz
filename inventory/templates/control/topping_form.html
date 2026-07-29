@@ -29,4 +29,67 @@
         </div>
     </form>
 </div>
+
+{% if object.pk %}
+<div class="card" style="margin-top:20px;">
+    <h3>Ingredientes (por porción)</h3>
+    {% if ingredients %}
+    <table>
+        <thead><tr><th>Materia prima</th><th>Cantidad</th><th>Unidad</th><th>Notas</th><th></th></tr></thead>
+        <tbody>
+            {% for ing in ingredients %}
+            <tr>
+                <td>{{ ing.raw_product.name }}</td>
+                <td>{{ ing.quantity }}</td>
+                <td>{{ ing.get_unit_display }}</td>
+                <td>{{ ing.notes|default:'—' }}</td>
+                <td>
+                    <form method="post" action="{% url 'topping_delete_ingredient' object.pk ing.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este ingrediente?')">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#888;">Sin ingredientes aún.</p>
+    {% endif %}
+
+    <hr style="margin:20px 0;">
+    <h4>Agregar ingrediente</h4>
+    <form method="post" action="{% url 'topping_add_ingredient' object.pk %}">
+        {% csrf_token %}
+        <div class="grid-4" style="gap:10px;">
+            <div class="form-group">
+                <label style="font-size:0.85em;font-weight:600;">Materia prima</label>
+                <select name="raw_product" required style="width:100%;padding:8px;border:2px solid #e8d4c0;border-radius:6px;">
+                    <option value="">—</option>
+                    {% for rp in raw_products %}
+                    <option value="{{ rp.id }}">{{ rp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="font-size:0.85em;font-weight:600;">Cantidad</label>
+                <input type="number" name="quantity" step="0.001" min="0.001" required style="width:100%;padding:8px;border:2px solid #e8d4c0;border-radius:6px;">
+            </div>
+            <div class="form-group">
+                <label style="font-size:0.85em;font-weight:600;">Unidad</label>
+                <select name="unit" style="width:100%;padding:8px;border:2px solid #e8d4c0;border-radius:6px;">
+                    <option value="g">Gramos</option>
+                    <option value="mg">Miligramos</option>
+                    <option value="pcs">Piezas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="font-size:0.85em;font-weight:600;">Notas</label>
+                <input type="text" name="notes" placeholder="ej. tamizado" style="width:100%;padding:8px;border:2px solid #e8d4c0;border-radius:6px;">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:10px;">+ Agregar</button>
+    </form>
+</div>
+{% endif %}
 {% endblock %}

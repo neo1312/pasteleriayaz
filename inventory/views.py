@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -8,7 +9,7 @@ from django.db.models import Sum, Count, Q, F
 from decimal import Decimal
 from datetime import datetime, timedelta
 import json
-from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand
+from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient
 
 
 def product_gallery(request):
@@ -565,13 +566,15 @@ def base_bread_create(request):
         )
         b.save()
         messages.success(request, f'Base "{b.name}" creada.')
-        return redirect('base_bread_list')
+        return redirect('base_bread_edit', pk=b.pk)
     return render(request, 'control/basebread_form.html')
 
 
 @login_required
 def base_bread_edit(request, pk):
     b = get_object_or_404(BaseBread, pk=pk)
+    ingredients = b.ingredients.select_related('raw_product').order_by('raw_product__name')
+    raw_products = RawProduct.objects.order_by('name')
     if request.method == 'POST':
         b.name = request.POST.get('name', b.name)
         b.description = request.POST.get('description', b.description)
@@ -579,8 +582,10 @@ def base_bread_edit(request, pk):
         b.is_available = request.POST.get('is_available') == 'on'
         b.save()
         messages.success(request, f'Base "{b.name}" actualizada.')
-        return redirect('base_bread_list')
-    return render(request, 'control/basebread_form.html', {'object': b})
+        return redirect('base_bread_edit', pk=b.pk)
+    return render(request, 'control/basebread_form.html', {
+        'object': b, 'ingredients': ingredients, 'raw_products': raw_products,
+    })
 
 
 @login_required
@@ -591,6 +596,33 @@ def base_bread_delete(request, pk):
         messages.success(request, 'Base eliminada.')
         return redirect('base_bread_list')
     return render(request, 'control/confirm_delete.html', {'object': b, 'cancel_url': 'base_bread_list'})
+
+
+@login_required
+@require_POST
+def base_bread_add_ingredient(request, pk):
+    b = get_object_or_404(BaseBread, pk=pk)
+    rp_id = request.POST.get('raw_product')
+    qty = request.POST.get('quantity', '0')
+    unit = request.POST.get('unit', 'g')
+    notes = request.POST.get('notes', '').strip()
+    if rp_id and Decimal(qty) > 0:
+        BaseBreadIngredient.objects.update_or_create(
+            base_bread=b,
+            raw_product_id=rp_id,
+            defaults={'quantity': qty, 'unit': unit, 'notes': notes},
+        )
+        messages.success(request, 'Ingrediente agregado.')
+    return redirect('base_bread_edit', pk=b.pk)
+
+
+@login_required
+@require_POST
+def base_bread_delete_ingredient(request, pk, ing_pk):
+    ing = get_object_or_404(BaseBreadIngredient, pk=ing_pk, base_bread_id=pk)
+    ing.delete()
+    messages.success(request, 'Ingrediente eliminado.')
+    return redirect('base_bread_edit', pk=pk)
 
 
 # ── Filling CRUD ─────────────────────────────────────────────────────────────
@@ -615,13 +647,15 @@ def filling_create(request):
         )
         f.save()
         messages.success(request, f'Relleno "{f.name}" creado.')
-        return redirect('filling_list')
+        return redirect('filling_edit', pk=f.pk)
     return render(request, 'control/filling_form.html')
 
 
 @login_required
 def filling_edit(request, pk):
     f = get_object_or_404(Filling, pk=pk)
+    ingredients = f.ingredients.select_related('raw_product').order_by('raw_product__name')
+    raw_products = RawProduct.objects.order_by('name')
     if request.method == 'POST':
         f.name = request.POST.get('name', f.name)
         f.description = request.POST.get('description', f.description)
@@ -629,8 +663,10 @@ def filling_edit(request, pk):
         f.is_available = request.POST.get('is_available') == 'on'
         f.save()
         messages.success(request, f'Relleno "{f.name}" actualizado.')
-        return redirect('filling_list')
-    return render(request, 'control/filling_form.html', {'object': f})
+        return redirect('filling_edit', pk=f.pk)
+    return render(request, 'control/filling_form.html', {
+        'object': f, 'ingredients': ingredients, 'raw_products': raw_products,
+    })
 
 
 @login_required
@@ -641,6 +677,33 @@ def filling_delete(request, pk):
         messages.success(request, 'Relleno eliminado.')
         return redirect('filling_list')
     return render(request, 'control/confirm_delete.html', {'object': f, 'cancel_url': 'filling_list'})
+
+
+@login_required
+@require_POST
+def filling_add_ingredient(request, pk):
+    f = get_object_or_404(Filling, pk=pk)
+    rp_id = request.POST.get('raw_product')
+    qty = request.POST.get('quantity', '0')
+    unit = request.POST.get('unit', 'g')
+    notes = request.POST.get('notes', '').strip()
+    if rp_id and Decimal(qty) > 0:
+        FillingIngredient.objects.update_or_create(
+            filling=f,
+            raw_product_id=rp_id,
+            defaults={'quantity': qty, 'unit': unit, 'notes': notes},
+        )
+        messages.success(request, 'Ingrediente agregado.')
+    return redirect('filling_edit', pk=f.pk)
+
+
+@login_required
+@require_POST
+def filling_delete_ingredient(request, pk, ing_pk):
+    ing = get_object_or_404(FillingIngredient, pk=ing_pk, filling_id=pk)
+    ing.delete()
+    messages.success(request, 'Ingrediente eliminado.')
+    return redirect('filling_edit', pk=pk)
 
 
 # ── Topping CRUD ─────────────────────────────────────────────────────────────
@@ -665,13 +728,15 @@ def topping_create(request):
         )
         t.save()
         messages.success(request, f'Cubierta "{t.name}" creada.')
-        return redirect('topping_list')
+        return redirect('topping_edit', pk=t.pk)
     return render(request, 'control/topping_form.html')
 
 
 @login_required
 def topping_edit(request, pk):
     t = get_object_or_404(Topping, pk=pk)
+    ingredients = t.ingredients.select_related('raw_product').order_by('raw_product__name')
+    raw_products = RawProduct.objects.order_by('name')
     if request.method == 'POST':
         t.name = request.POST.get('name', t.name)
         t.description = request.POST.get('description', t.description)
@@ -679,8 +744,10 @@ def topping_edit(request, pk):
         t.is_available = request.POST.get('is_available') == 'on'
         t.save()
         messages.success(request, f'Cubierta "{t.name}" actualizada.')
-        return redirect('topping_list')
-    return render(request, 'control/topping_form.html', {'object': t})
+        return redirect('topping_edit', pk=t.pk)
+    return render(request, 'control/topping_form.html', {
+        'object': t, 'ingredients': ingredients, 'raw_products': raw_products,
+    })
 
 
 @login_required
@@ -691,6 +758,33 @@ def topping_delete(request, pk):
         messages.success(request, 'Cubierta eliminada.')
         return redirect('topping_list')
     return render(request, 'control/confirm_delete.html', {'object': t, 'cancel_url': 'topping_list'})
+
+
+@login_required
+@require_POST
+def topping_add_ingredient(request, pk):
+    t = get_object_or_404(Topping, pk=pk)
+    rp_id = request.POST.get('raw_product')
+    qty = request.POST.get('quantity', '0')
+    unit = request.POST.get('unit', 'g')
+    notes = request.POST.get('notes', '').strip()
+    if rp_id and Decimal(qty) > 0:
+        ToppingIngredient.objects.update_or_create(
+            topping=t,
+            raw_product_id=rp_id,
+            defaults={'quantity': qty, 'unit': unit, 'notes': notes},
+        )
+        messages.success(request, 'Ingrediente agregado.')
+    return redirect('topping_edit', pk=t.pk)
+
+
+@login_required
+@require_POST
+def topping_delete_ingredient(request, pk, ing_pk):
+    ing = get_object_or_404(ToppingIngredient, pk=ing_pk, topping_id=pk)
+    ing.delete()
+    messages.success(request, 'Ingrediente eliminado.')
+    return redirect('topping_edit', pk=pk)
 
 
 # ── Brand CRUD ───────────────────────────────────────────────────────────────
