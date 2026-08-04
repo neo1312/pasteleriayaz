@@ -93,6 +93,7 @@ urlpatterns = [
     path('pedidos/<int:pk>/aprobar/', views.order_approve, name='order_approve'),
     path('pedidos/<int:pk>/entregar/', views.order_deliver, name='order_deliver'),
     path('pedidos/<int:pk>/pagar/', views.order_pay, name='order_pay'),
+    path('pedidos/<int:pk>/publicar-galeria/', views.order_publish_gallery, name='order_publish_gallery'),
     path('pedidos/<int:pk>/verificar-stock/', views.order_stock_check, name='order_stock_check'),
     path('pedidos/<int:pk>/solicitud-compra/', views.order_purchase_request_pdf, name='order_purchase_request_pdf'),
 

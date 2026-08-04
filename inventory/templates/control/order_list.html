@@ -8,6 +8,7 @@
 .btn-deliver { background:#2980b9;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
 .btn-pay { background:#8e44ad;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
 .btn-stock { background:#f39c12;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
+.btn-gallery { background:#27ae60;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.85em;display:inline-block; }
 .order-status { display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600; }
 .order-status.pending { background:#fef3cd;color:#856404; }
 .order-status.approved { background:#d1ecf1;color:#0c5460; }
@@ -61,6 +62,16 @@
                         {% csrf_token %}
                         <button type="submit" class="btn-pay" style="border:none;cursor:pointer;" onclick="return confirm('¿Marcar pedido #{{ o.id }} como pagado?')">💰 Pagar</button>
                     </form>
+                    {% endif %}
+                    {% if o.status == 'delivered' or o.status == 'paid' %}
+                        {% if o.product.show_in_gallery %}
+                        <span class="btn-gallery" style="opacity:.6;cursor:default;">🖼️ En galería</span>
+                        {% else %}
+                        <form method="post" action="{% url 'order_publish_gallery' o.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-gallery" style="border:none;cursor:pointer;">🖼️ Publicar en galería</button>
+                        </form>
+                        {% endif %}
                     {% endif %}
                     <a href="{% url 'order_edit' o.id %}" class="btn btn-sm btn-outline">Editar</a>
                     <a href="{% url 'order_delete' o.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar pedido #{{ o.id }}?')">Eliminar</a>

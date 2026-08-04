@@ -926,7 +926,6 @@ def product_quick_create(request):
     fillings = Filling.objects.filter(is_available=True)
     toppings = Topping.objects.filter(is_available=True)
     tiers = ComplexityTier.objects.all()
-    tags = EventTag.objects.order_by('name')
     clients = Client.objects.order_by('name')
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
@@ -934,7 +933,7 @@ def product_quick_create(request):
             messages.error(request, 'El nombre es obligatorio.')
             return render(request, 'control/product_quick_create.html', {
                 'breads': breads, 'fillings': fillings, 'toppings': toppings,
-                'tiers': tiers, 'tags': tags, 'clients': clients,
+                'tiers': tiers, 'clients': clients,
             })
 
         # 1. Create the product
@@ -942,13 +941,8 @@ def product_quick_create(request):
             name=name,
             category='cake',
             description=request.POST.get('description', ''),
-            short_description=request.POST.get('short_description', ''),
             price=Decimal(0),
             is_available=True,
-            show_in_gallery=request.POST.get('show_in_gallery') == 'on',
-            design_description=request.POST.get('design_description', ''),
-            color_scheme=request.POST.get('color_scheme', ''),
-            gender=request.POST.get('gender', ''),
         )
         if request.POST.get('base_bread'):
             product.base_bread_id = int(request.POST['base_bread'])
@@ -959,9 +953,6 @@ def product_quick_create(request):
         if request.POST.get('complexity_tier'):
             product.complexity_tier_id = int(request.POST['complexity_tier'])
         product.save()
-        event_tag_ids = request.POST.getlist('event_tags')
-        if event_tag_ids:
-            product.event_tags.set(EventTag.objects.filter(id__in=event_tag_ids))
 
         # 2. Get or create client
         client_id = request.POST.get('client')
@@ -997,7 +988,7 @@ def product_quick_create(request):
 
     return render(request, 'control/product_quick_create.html', {
         'breads': breads, 'fillings': fillings, 'toppings': toppings,
-        'tiers': tiers, 'tags': tags, 'clients': clients,
+        'tiers': tiers, 'clients': clients,
     })
 
 
@@ -1042,6 +1033,16 @@ def order_pay(request, pk):
     order.save(update_fields=['status'])
     messages.success(request, f'Pedido #{order.id} marcado como pagado.')
     return redirect('order_list')
+
+
+@login_required
+def order_publish_gallery(request, pk):
+    order = get_object_or_404(Order.objects.select_related('product'), pk=pk)
+    product = order.product
+    product.show_in_gallery = True
+    product.save(update_fields=['show_in_gallery'])
+    messages.success(request, f'✅ "{product.name}" publicado en la galería. Completa la información y foto.')
+    return redirect('product_edit', pk=product.pk)
 
 
 @login_required

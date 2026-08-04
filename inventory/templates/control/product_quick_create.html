@@ -67,45 +67,6 @@
         </div>
 
         <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
-            <h4 style="margin-bottom:12px;color:#3d2817;">🖼️ Galería (opcional)</h4>
-            <div class="form-group" style="margin-bottom:12px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción corta</label>
-                <input type="text" id="id_short_description" maxlength="300" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
-            </div>
-            <div class="form-group" style="margin-bottom:12px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción de diseño</label>
-                <textarea id="id_design_description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;"></textarea>
-            </div>
-            <div class="grid-2">
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Colores</label>
-                    <input type="text" id="id_color_scheme" placeholder="rosa, dorado, blanco" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Género</label>
-                    <select id="id_gender" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
-                        <option value="">—</option>
-                        <option value="nino">Niño</option>
-                        <option value="nina">Niña</option>
-                        <option value="hombre">Hombre</option>
-                        <option value="mujer">Mujer</option>
-                        <option value="unisex">Unisex</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group" style="margin-top:12px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Etiquetas de evento</label>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                    {% for t in tags %}
-                    <label style="display:flex;align-items:center;gap:4px;font-size:0.9em;cursor:pointer;">
-                        <input type="checkbox" class="event-tag" value="{{ t.id }}"> {{ t.name }}
-                    </label>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
             <h4 style="margin-bottom:12px;color:#3d2817;">👤 Cliente</h4>
             <div class="form-group" style="margin-bottom:12px;">
                 <select id="id_client" required onchange="toggleNewClient()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
@@ -155,11 +116,6 @@
                     <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Vence</label>
                     <input type="date" id="id_due_date" value="{{ ''|date:'Y-m-d' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
                 </div>
-            </div>
-            <div class="form-group" style="margin-bottom:8px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
-                    <input type="checkbox" id="id_show_in_gallery"> Mostrar en galería
-                </label>
             </div>
         </div>
 
@@ -268,19 +224,11 @@
             data.append('filling', document.getElementById('id_filling').value || '');
             data.append('topping', document.getElementById('id_topping').value || '');
             data.append('complexity_tier', document.getElementById('id_complexity_tier').value || '');
-            data.append('short_description', document.getElementById('id_short_description').value || '');
-            data.append('design_description', document.getElementById('id_design_description').value || '');
-            data.append('color_scheme', document.getElementById('id_color_scheme').value || '');
-            data.append('gender', document.getElementById('id_gender').value || '');
             data.append('client', cid);
             data.append('persons', persons);
             data.append('design_notes', document.getElementById('id_design_notes').value || '');
             data.append('delivery_cost', document.getElementById('id_delivery_cost').value || '0');
             data.append('due_date', document.getElementById('id_due_date').value || '');
-            data.append('show_in_gallery', document.getElementById('id_show_in_gallery').checked ? 'on' : '');
-
-            const tags = Array.from(document.querySelectorAll('.event-tag:checked')).map(el => el.value);
-            tags.forEach(t => data.append('event_tags', t));
 
             fetch('{% url "product_quick_create" %}', {
                 method: 'POST',
