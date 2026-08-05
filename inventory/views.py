@@ -7,12 +7,25 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Sum, Count, Q, F
 from django.template.loader import render_to_string
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
 import json
 import io
 from weasyprint import HTML
 from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag
+
+
+def parse_decimal(value, default=Decimal('0')):
+    """Safely parse a decimal from form input (handles commas and empty values)."""
+    if value is None:
+        return default
+    value = str(value).strip().replace(',', '.')
+    if not value:
+        return default
+    try:
+        return Decimal(value)
+    except (InvalidOperation, ValueError):
+        return default
 
 
 def product_gallery(request):
@@ -72,7 +85,7 @@ def quote_edit(request, pk):
             quote.client = Client.objects.get(id=request.POST['client'])
             quote.persons = int(request.POST['persons'])
             quote.design_notes = request.POST.get('design_notes', '').strip()
-            quote.delivery_cost = Decimal(request.POST.get('delivery_cost', '0'))
+            quote.delivery_cost = parse_decimal(request.POST.get('delivery_cost', '0'))
             quote.due_date = request.POST.get('due_date', None) or None
             quote.recalculate()
             quote.save()
@@ -184,7 +197,7 @@ def product_create(request):
             category=request.POST.get('category', 'other'),
             description=request.POST.get('description', ''),
             short_description=request.POST.get('short_description', ''),
-            price=Decimal(request.POST.get('price', '0')),
+            price=parse_decimal(request.POST.get('price', '0')),
             is_available=request.POST.get('is_available') == 'on',
             show_in_gallery=request.POST.get('show_in_gallery') == 'on',
             design_description=request.POST.get('design_description', ''),
@@ -202,7 +215,7 @@ def product_create(request):
         if request.POST.get('complexity_tier'):
             product.complexity_tier_id = int(request.POST['complexity_tier'])
         if request.POST.get('base_labor_per_portion'):
-            product.base_labor_per_portion = Decimal(request.POST['base_labor_per_portion'])
+            product.base_labor_per_portion = parse_decimal(request.POST['base_labor_per_portion'])
         if request.POST.get('min_persons'):
             product.min_persons = int(request.POST['min_persons'])
         if request.POST.get('max_persons'):
@@ -230,13 +243,13 @@ def product_edit(request, pk):
         product.category = request.POST.get('category', product.category)
         product.description = request.POST.get('description', product.description)
         product.short_description = request.POST.get('short_description', product.short_description or '')
-        product.price = Decimal(request.POST.get('price', '0'))
+        product.price = parse_decimal(request.POST.get('price', '0'))
         product.base_bread_id = request.POST.get('base_bread') or None
         product.filling_id = request.POST.get('filling') or None
         product.topping_id = request.POST.get('topping') or None
         product.brand_id = request.POST.get('brand') or None
         product.complexity_tier_id = request.POST.get('complexity_tier') or None
-        product.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
+        product.base_labor_per_portion = parse_decimal(request.POST.get('base_labor_per_portion', '0'))
         product.min_persons = int(request.POST.get('min_persons', '1'))
         product.max_persons = int(request.POST.get('max_persons', '100'))
         product.is_available = request.POST.get('is_available') == 'on'
@@ -346,7 +359,7 @@ def order_edit(request, pk):
         order.client_id = request.POST.get('client')
         order.product_id = request.POST.get('product')
         order.persons = int(request.POST.get('persons', '1'))
-        order.delivery_cost = Decimal(request.POST.get('delivery_cost', '0'))
+        order.delivery_cost = parse_decimal(request.POST.get('delivery_cost', '0'))
         order.deadline = request.POST.get('deadline') or None
         order.status = request.POST.get('status', order.status)
         order.notes = request.POST.get('notes', '')
@@ -391,9 +404,9 @@ def rawproduct_create(request):
             name=request.POST.get('name', '').strip(),
             brand_id=request.POST.get('brand') or None,
             unit=request.POST.get('unit', 'kg'),
-            cost_per_unit=Decimal(request.POST.get('cost_per_unit', '0')),
-            quantity_in_stock=Decimal(request.POST.get('quantity_in_stock', '0')),
-            reorder_level=Decimal(request.POST.get('reorder_level', '10')),
+            cost_per_unit=parse_decimal(request.POST.get('cost_per_unit', '0')),
+            quantity_in_stock=parse_decimal(request.POST.get('quantity_in_stock', '0')),
+            reorder_level=parse_decimal(request.POST.get('reorder_level', '10')),
             provider_id=request.POST.get('provider') or None,
         )
         rp.save()
@@ -415,9 +428,9 @@ def rawproduct_edit(request, pk):
         rp.name = request.POST.get('name', rp.name)
         rp.brand_id = request.POST.get('brand') or None
         rp.unit = request.POST.get('unit', rp.unit)
-        rp.cost_per_unit = Decimal(request.POST.get('cost_per_unit', '0'))
-        rp.quantity_in_stock = Decimal(request.POST.get('quantity_in_stock', '0'))
-        rp.reorder_level = Decimal(request.POST.get('reorder_level', '10'))
+        rp.cost_per_unit = parse_decimal(request.POST.get('cost_per_unit', '0'))
+        rp.quantity_in_stock = parse_decimal(request.POST.get('quantity_in_stock', '0'))
+        rp.reorder_level = parse_decimal(request.POST.get('reorder_level', '10'))
         rp.provider_id = request.POST.get('provider') or None
         rp.save()
         messages.success(request, f'Insumo "{rp.name}" actualizado.')
@@ -557,7 +570,7 @@ def base_bread_create(request):
         b = BaseBread(
             name=request.POST.get('name', '').strip(),
             description=request.POST.get('description', '').strip(),
-            base_labor_per_portion=Decimal(request.POST.get('base_labor_per_portion', '0')),
+            base_labor_per_portion=parse_decimal(request.POST.get('base_labor_per_portion', '0')),
             is_available=request.POST.get('is_available') == 'on',
         )
         b.save()
@@ -574,7 +587,7 @@ def base_bread_edit(request, pk):
     if request.method == 'POST':
         b.name = request.POST.get('name', b.name)
         b.description = request.POST.get('description', b.description)
-        b.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
+        b.base_labor_per_portion = parse_decimal(request.POST.get('base_labor_per_portion', '0'))
         b.is_available = request.POST.get('is_available') == 'on'
         b.save()
         messages.success(request, f'Base "{b.name}" actualizada.')
@@ -653,7 +666,7 @@ def filling_create(request):
         f = Filling(
             name=request.POST.get('name', '').strip(),
             description=request.POST.get('description', '').strip(),
-            base_labor_per_portion=Decimal(request.POST.get('base_labor_per_portion', '0')),
+            base_labor_per_portion=parse_decimal(request.POST.get('base_labor_per_portion', '0')),
             is_available=request.POST.get('is_available') == 'on',
         )
         f.save()
@@ -670,7 +683,7 @@ def filling_edit(request, pk):
     if request.method == 'POST':
         f.name = request.POST.get('name', f.name)
         f.description = request.POST.get('description', f.description)
-        f.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
+        f.base_labor_per_portion = parse_decimal(request.POST.get('base_labor_per_portion', '0'))
         f.is_available = request.POST.get('is_available') == 'on'
         f.save()
         messages.success(request, f'Relleno "{f.name}" actualizado.')
@@ -749,7 +762,7 @@ def topping_create(request):
         t = Topping(
             name=request.POST.get('name', '').strip(),
             description=request.POST.get('description', '').strip(),
-            base_labor_per_portion=Decimal(request.POST.get('base_labor_per_portion', '0')),
+            base_labor_per_portion=parse_decimal(request.POST.get('base_labor_per_portion', '0')),
             is_available=request.POST.get('is_available') == 'on',
         )
         t.save()
@@ -766,7 +779,7 @@ def topping_edit(request, pk):
     if request.method == 'POST':
         t.name = request.POST.get('name', t.name)
         t.description = request.POST.get('description', t.description)
-        t.base_labor_per_portion = Decimal(request.POST.get('base_labor_per_portion', '0'))
+        t.base_labor_per_portion = parse_decimal(request.POST.get('base_labor_per_portion', '0'))
         t.is_available = request.POST.get('is_available') == 'on'
         t.save()
         messages.success(request, f'Cubierta "{t.name}" actualizada.')
@@ -967,7 +980,7 @@ def product_quick_create(request):
 
         # 3. Create the quote with status 'sent'
         persons = int(request.POST.get('persons', 1))
-        delivery_cost = Decimal(request.POST.get('delivery_cost', '0'))
+        delivery_cost = parse_decimal(request.POST.get('delivery_cost', '0'))
         due_date_str = request.POST.get('due_date', '')
         due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else (datetime.now() + timedelta(days=15)).date()
 
