@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django import forms
 from django.shortcuts import render
 from django.utils.formats import number_format
-from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient, Brand, EventTag
+from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, QuoteAgregado, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient, Brand, EventTag
 
 
 class IngredientInline(admin.TabularInline):
@@ -205,6 +205,14 @@ class PurchaseAdmin(admin.ModelAdmin):
     get_total_cost.short_description = 'Costo Total'
 
 
+class QuoteAgregadoInline(admin.TabularInline):
+    model = QuoteAgregado
+    extra = 0
+    fields = ('description', 'amount')
+    verbose_name = "Agregado"
+    verbose_name_plural = "Agregados"
+
+
 @admin.register(Quote)
 class QuoteAdmin(admin.ModelAdmin):
     change_form_template = 'admin/inventory/quote/change_form.html'
@@ -216,7 +224,8 @@ class QuoteAdmin(admin.ModelAdmin):
     )
     list_filter  = ('status', 'due_date', 'client')
     search_fields = ('client__name', 'name', 'notes')
-    readonly_fields = ('unit_price', 'ingredient_cost', 'labor_cost', 'benefit_amount', 'design_surcharge', 'show_total_price', 'show_grand_total', 'show_days_until_due')
+    readonly_fields = ('unit_price', 'ingredient_cost', 'labor_cost', 'benefit_amount', 'design_surcharge', 'extras_amount', 'show_total_price', 'show_grand_total', 'show_days_until_due')
+    inlines = [QuoteAgregadoInline]
     fieldsets = (
         ('Detalles de Cotización', {
             'fields': ('client', 'name', 'base_bread', 'filling', 'topping', 'complexity_tier', 'persons', 'design_notes'),
@@ -225,7 +234,7 @@ class QuoteAdmin(admin.ModelAdmin):
             'fields': ('benefit_percentage', 'unit_price'),
         }),
         ('Costos (auto)', {
-            'fields': ('ingredient_cost', 'labor_cost', 'design_surcharge', 'benefit_amount', 'delivery_cost', 'show_delivery_on_pdf'),
+            'fields': ('ingredient_cost', 'labor_cost', 'design_surcharge', 'benefit_amount', 'extras_amount', 'delivery_cost'),
         }),
         ('Producto (se crea al vender)', {
             'fields': ('product',),
@@ -337,6 +346,13 @@ class QuoteAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.recalculate()
         super().save_model(request, obj, form, change)
+
+    def save_related(self, request, form, formsets, change):
+        """Recalculate after M2M agregados are saved."""
+        super().save_related(request, form, formsets, change)
+        obj = form.instance
+        obj.recalculate()
+        obj.save(update_fields=['extras_amount', 'ingredient_cost', 'labor_cost', 'design_surcharge', 'benefit_amount', 'unit_price'])
 
     # ── display helpers ──────────────────────────────────────────────────────
 

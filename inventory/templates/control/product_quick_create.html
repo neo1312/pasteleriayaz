@@ -73,6 +73,17 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-group" style="margin-top:12px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">✨ Agregados</label>
+                <div id="agregadosRows">
+                    <div class="agregado-row" style="display:flex;gap:8px;margin-bottom:8px;">
+                        <input type="text" class="agregado-desc" placeholder="Descripción (ej. letrero, velas...)" style="flex:1;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                        <input type="number" class="agregado-amount" placeholder="Monto" step="0.01" min="0" oninput="updatePrice()" style="width:110px;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeAgregadoRow(this)" title="Quitar">✕</button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline" onclick="addAgregadoRow()">➕ Agregar</button>
+            </div>
         </div>
 
         <div style="background:#faf8f3;border-radius:8px;padding:16px;margin-bottom:16px;border:2px solid #e8d4c0;">
@@ -130,11 +141,6 @@
                     <input type="date" id="id_due_date" value="{{ ''|date:'Y-m-d' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
                 </div>
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
-                    <input type="checkbox" id="id_show_delivery_pdf"> Incluir costo de envío en el PDF
-                </label>
-            </div>
         </div>
 
         <div class="card" style="margin-top:20px;">
@@ -180,7 +186,37 @@
             persons: parseInt(document.getElementById('id_persons').value) || 1,
             benefit: parseFloat(document.getElementById('id_benefit').value) || 0,
             delivery_cost: parseFloat(document.getElementById('id_delivery_cost').value) || 0,
+            agregados: getAgregados(),
         };
+    }
+
+    function getAgregados() {
+        return Array.from(document.querySelectorAll('.agregado-row')).map(row => {
+            const desc = row.querySelector('.agregado-desc').value.trim();
+            const amount = parseFloat(row.querySelector('.agregado-amount').value) || 0;
+            return { description: desc, amount: amount };
+        }).filter(a => a.description && a.amount > 0);
+    }
+
+    function addAgregadoRow() {
+        const container = document.getElementById('agregadosRows');
+        const div = document.createElement('div');
+        div.className = 'agregado-row';
+        div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+        div.innerHTML = `
+            <input type="text" class="agregado-desc" placeholder="Descripción (ej. letrero, velas...)" oninput="updatePrice()" style="flex:1;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+            <input type="number" class="agregado-amount" placeholder="Monto" step="0.01" min="0" oninput="updatePrice()" style="width:110px;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeAgregadoRow(this)" title="Quitar">✕</button>`;
+        container.appendChild(div);
+        div.querySelector('.agregado-desc').focus();
+    }
+
+    function removeAgregadoRow(btn) {
+        const row = btn.closest('.agregado-row');
+        if (row && document.querySelectorAll('.agregado-row').length > 1) {
+            row.remove();
+            updatePrice();
+        }
     }
 
     function updatePrice() {
@@ -204,6 +240,7 @@
             base_bread: data.base_bread || '',
             filling: data.filling || '',
             topping: data.topping || '',
+            agregados: JSON.stringify(data.agregados) || '',
         });
 
         fetch('/api/calcular-precio-rapido/?' + params.toString())
@@ -215,6 +252,8 @@
                 }
                 const total = parseFloat(data.total);
                 const grandTotal = total + deliveryCost;
+                const extrasHtml = (data.extras || []).length ? data.extras.map(e =>
+                    `<div class="price-row"><span>✨ ${e.description}</span><span class="value">+$${parseFloat(e.amount).toFixed(2)}</span></div>`).join('') : '';
                 const comps = (data.components || []).filter(Boolean);
                 const icons = { base_bread: '🍰', filling: '🥫', topping: '🎂' };
                 const compLabels = { base_bread: 'Base Pastel', filling: 'Relleno', topping: 'Cubierta' };
@@ -238,6 +277,7 @@
                     <div class="price-row"><span>🧾 Ingredientes</span><span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>👨‍🍳 Mano de obra</span><span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>🎨 Recargo por diseño</span><span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span></div>
+                    ${extrasHtml}
                     <div class="price-row"><span>💵 Beneficio (${data.benefit_percentage}%)</span><span class="value">+$${parseFloat(data.benefit_amount).toFixed(2)}</span></div>
                     <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.unit_price).toFixed(2)}</span></div>
                     <div class="price-row total"><span>📦 Subtotal (${persons} pers.)</span><span class="value">$${total.toFixed(2)}</span></div>
@@ -281,7 +321,10 @@
             data.append('benefit', document.getElementById('id_benefit').value || '50');
             data.append('design_notes', document.getElementById('id_design_notes').value || '');
             data.append('delivery_cost', document.getElementById('id_delivery_cost').value || '0');
-            data.append('show_delivery_on_pdf', document.getElementById('id_show_delivery_pdf').checked ? 'on' : '');
+            getAgregados().forEach(a => {
+                data.append('agregado_desc', a.description);
+                data.append('agregado_amount', String(a.amount));
+            });
             data.append('due_date', document.getElementById('id_due_date').value || '');
 
             fetch('{% url "product_quick_create" %}', {

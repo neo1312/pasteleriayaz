@@ -27,9 +27,11 @@ def _conversion_factor(from_unit, to_unit):
     return _UNIT_FACTORS.get((from_unit, to_unit), Decimal('1'))
 
 
-def calculate_components_cost(base_bread, filling, topping, complexity_tier, persons, benefit_percentage):
+def calculate_components_cost(base_bread, filling, topping, complexity_tier, persons, benefit_percentage, extras_total=Decimal('0')):
     """Desglose de costos para un pastel armado por componentes (incluye beneficio).
 
+    El beneficio se aplica sobre ingredientes + mano de obra + recargo de diseño
+    + agregados. El envío nunca entra en esta base.
     Returns totals for all ``persons`` plus the unit price per person.
     """
     persons = Decimal(str(persons))
@@ -49,16 +51,18 @@ def calculate_components_cost(base_bread, filling, topping, complexity_tier, per
     base_per = ing_per + labor_per
     design_pct = complexity_tier.surcharge_percentage if complexity_tier else Decimal('0')
     design_per = base_per * design_pct / pct
-    benefit_per = (base_per + design_per) * (benefit_percentage or Decimal('0')) / pct
-    total_per = base_per + design_per + benefit_per
+    comp_total = (base_per + design_per) * persons
+    extras_total = Decimal(extras_total or '0')
+    benefit_amount = (comp_total + extras_total) * (benefit_percentage or Decimal('0')) / pct
+    total = comp_total + extras_total + benefit_amount
 
     return {
         'ingredient_cost': ing_per * persons,
         'labor_cost': labor_per * persons,
         'design_surcharge': design_per * persons,
-        'benefit_amount': benefit_per * persons,
-        'unit_price': total_per,
-        'total': total_per * persons,
+        'benefit_amount': benefit_amount,
+        'unit_price': (comp_total + benefit_amount) / persons if persons > 0 else Decimal('0'),
+        'total': total,
     }
 
 
@@ -642,7 +646,7 @@ class Quote(models.Model):
     labor_cost    = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Mano de obra")
     benefit_amount = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Beneficio")
     delivery_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Costo de envío")
-    show_delivery_on_pdf = models.BooleanField(default=False, verbose_name="Incluir envío en el PDF")
+    extras_amount = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Agregados")
     due_date      = models.DateField(verbose_name="Fecha de vencimiento")
     status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name="Estado")
     notes         = models.TextField(blank=True, verbose_name="Notas")
@@ -660,7 +664,12 @@ class Quote(models.Model):
 
     @property
     def total_price(self):
-        """Subtotal = precio por persona × personas (incluye beneficio y diseño)."""
+        """Subtotal = precio por persona × personas + agregados (incluye beneficio y diseño)."""
+        return (self.unit_price or Decimal('0')) * (self.persons or 1) + (self.extras_amount or Decimal('0'))
+
+    @property
+    def components_total(self):
+        """Subtotal sin agregados = precio por persona × personas."""
         return (self.unit_price or Decimal('0')) * (self.persons or 1)
 
     @property
@@ -678,11 +687,13 @@ class Quote(models.Model):
         return (self.due_date - timezone.now().date()).days
 
     def recalculate(self):
+        self.extras_amount = sum((ag.amount or Decimal('0')) for ag in self.agregados.all())
         has_components = self.base_bread_id or self.filling_id or self.topping_id
         if has_components:
             b = calculate_components_cost(
                 self.base_bread, self.filling, self.topping,
                 self.complexity_tier, self.persons or 1, self.benefit_percentage,
+                self.extras_amount,
             )
             self.ingredient_cost = b['ingredient_cost']
             self.labor_cost = b['labor_cost']
@@ -695,9 +706,8 @@ class Quote(models.Model):
             self.ingredient_cost = b['ingredient_cost']
             self.labor_cost = b['labor_cost']
             self.design_surcharge = b['design_surcharge']
-            self.benefit_amount = (b['base_total'] + b['design_surcharge']) * benefit
+            self.benefit_amount = (b['base_total'] + b['design_surcharge'] + self.extras_amount) * benefit
             self.unit_price = b['price_per_person'] * (Decimal('1') + benefit)
-
     def ensure_product(self):
         """Crea/recupera el Producto únicamente al momento de la venta."""
         if self.product_id:
@@ -725,3 +735,17 @@ class Quote(models.Model):
         ordering = ['-created_at']
         verbose_name = "Cotización"
         verbose_name_plural = "Cotizaciones"
+
+
+class QuoteAgregado(models.Model):
+    quote = models.ForeignKey(Quote, on_delete=models.CASCADE, related_name='agregados', verbose_name="Cotización")
+    description = models.CharField(max_length=200, verbose_name="Descripción")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")
+
+    def __str__(self):
+        return f"{self.description} (${self.amount})"
+
+    class Meta:
+        ordering = ['id']
+        verbose_name = "Agregado de Cotización"
+        verbose_name_plural = "Agregados de Cotización"

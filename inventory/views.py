@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import json
 import io
 from weasyprint import HTML
-from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag, calculate_components_cost
+from .models import Product, Order, Purchase, RawProduct, Client, Quote, QuoteAgregado, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag, calculate_components_cost
 from .image_utils import save_optimized_product_image
 
 
@@ -27,6 +27,15 @@ def parse_decimal(value, default=Decimal('0')):
         return Decimal(value)
     except (InvalidOperation, ValueError):
         return default
+
+
+def _save_quote_agregados(quote, post):
+    """Create the inline free-text agregado rows from a POST body."""
+    for desc, amt in zip(post.getlist('agregado_desc'), post.getlist('agregado_amount')):
+        desc = desc.strip()
+        amount = parse_decimal(amt)
+        if desc and amount > 0:
+            QuoteAgregado.objects.create(quote=quote, description=desc, amount=amount)
 
 
 def product_gallery(request):
@@ -94,8 +103,10 @@ def quote_edit(request, pk):
             quote.benefit_percentage = parse_decimal(request.POST.get('benefit', '50'))
             quote.design_notes = request.POST.get('design_notes', '').strip()
             quote.delivery_cost = parse_decimal(request.POST.get('delivery_cost', '0'))
-            quote.show_delivery_on_pdf = request.POST.get('show_delivery_on_pdf') == 'on'
             quote.due_date = request.POST.get('due_date', None) or None
+            quote.save()
+            quote.agregados.all().delete()
+            _save_quote_agregados(quote, request.POST)
             quote.recalculate()
             quote.save()
             messages.success(request, f'Cotización #{quote.id} actualizada.')
@@ -999,7 +1010,6 @@ def product_quick_create(request):
             persons=persons,
             design_notes=request.POST.get('design_notes', ''),
             delivery_cost=delivery_cost,
-            show_delivery_on_pdf=request.POST.get('show_delivery_on_pdf') == 'on',
             benefit_percentage=benefit,
             due_date=due_date,
             status='sent',
@@ -1012,6 +1022,8 @@ def product_quick_create(request):
             quote.topping_id = int(request.POST['topping'])
         if request.POST.get('complexity_tier'):
             quote.complexity_tier_id = int(request.POST['complexity_tier'])
+        quote.save()
+        _save_quote_agregados(quote, request.POST)
         quote.recalculate()
         quote.save()
 
@@ -1408,7 +1420,20 @@ def api_calculate_price_rapido(request):
         topping = get_object_or_404(Topping, pk=topping_id) if topping_id else None
         tier = get_object_or_404(ComplexityTier, pk=tier_id) if tier_id else None
 
-        b = calculate_components_cost(base_bread, filling, topping, tier, persons, benefit)
+        extras = []
+        extras_total = Decimal('0')
+        try:
+            extra_rows = json.loads(request.GET.get('agregados', '[]') or '[]')
+        except (ValueError, TypeError):
+            extra_rows = []
+        for row in extra_rows:
+            desc = str(row.get('description', '')).strip()
+            amount = parse_decimal(row.get('amount'))
+            if desc and amount > 0:
+                extras.append({'description': desc, 'amount': str(amount)})
+                extras_total += amount
+
+        b = calculate_components_cost(base_bread, filling, topping, tier, persons, benefit, extras_total)
 
         def _component(key, comp):
             if comp is None:
@@ -1443,7 +1468,10 @@ def api_calculate_price_rapido(request):
             'benefit_percentage': str(benefit),
             'unit_price': str(b['unit_price']),
             'total': str(b['total']),
+            'extras': extras,
+            'extras_amount': str(extras_total),
         }
+
         response['components'] = [
             _component('base_bread', base_bread),
             _component('filling', filling),

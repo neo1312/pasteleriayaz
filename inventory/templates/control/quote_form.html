@@ -85,6 +85,20 @@
             </div>
 
             <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">✨ Agregados</label>
+                <div id="agregadosRows">
+                    {% for a in quote.agregados.all %}
+                    <div class="agregado-row" style="display:flex;gap:8px;margin-bottom:8px;">
+                        <input type="text" class="agregado-desc" name="agregado_desc" value="{{ a.description }}" placeholder="Descripción (ej. letrero, velas...)" oninput="updatePrice()" style="flex:1;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                        <input type="number" class="agregado-amount" name="agregado_amount" value="{{ a.amount }}" step="0.01" min="0" oninput="updatePrice()" style="width:110px;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeAgregadoRow(this)" title="Quitar">✕</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-sm btn-outline" onclick="addAgregadoRow()">➕ Agregar</button>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Notas de diseño</label>
                 <textarea name="design_notes" placeholder="Decoración, colores, mensaje personalizado..." style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;">{{ quote.design_notes|default:'' }}</textarea>
             </div>
@@ -98,11 +112,6 @@
                     <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Vence</label>
                     <input type="date" name="due_date" value="{{ quote.due_date|date:'Y-m-d'|default:'' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
                 </div>
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
-                    <input type="checkbox" name="show_delivery_on_pdf" {% if quote.show_delivery_on_pdf %}checked{% endif %}> Incluir costo de envío en el PDF
-                </label>
             </div>
         </div>
 
@@ -125,6 +134,35 @@
 </form>
 
 <script>
+    function getAgregados() {
+        return Array.from(document.querySelectorAll('.agregado-row')).map(row => {
+            const desc = row.querySelector('.agregado-desc').value.trim();
+            const amount = parseFloat(row.querySelector('.agregado-amount').value) || 0;
+            return { description: desc, amount: amount };
+        }).filter(a => a.description && a.amount > 0);
+    }
+
+    function addAgregadoRow() {
+        const container = document.getElementById('agregadosRows');
+        const div = document.createElement('div');
+        div.className = 'agregado-row';
+        div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+        div.innerHTML = `
+            <input type="text" class="agregado-desc" name="agregado_desc" placeholder="Descripción (ej. letrero, velas...)" oninput="updatePrice()" style="flex:1;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+            <input type="number" class="agregado-amount" name="agregado_amount" step="0.01" min="0" oninput="updatePrice()" style="width:110px;padding:8px 12px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.9em;outline:none;">
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeAgregadoRow(this)" title="Quitar">✕</button>`;
+        container.appendChild(div);
+        div.querySelector('.agregado-desc').focus();
+    }
+
+    function removeAgregadoRow(btn) {
+        const row = btn.closest('.agregado-row');
+        if (row && document.querySelectorAll('.agregado-row').length > 1) {
+            row.remove();
+            updatePrice();
+        }
+    }
+
     function updatePrice() {
         const base = document.querySelector('[name="base_bread"]').value;
         const filling = document.querySelector('[name="filling"]').value;
@@ -147,6 +185,7 @@
             base_bread: base || '',
             filling: filling || '',
             topping: topping || '',
+            agregados: JSON.stringify(getAgregados()) || '',
         });
 
         fetch('/api/calcular-precio-rapido/?' + params.toString())
@@ -155,10 +194,13 @@
                 if (data.error) { display.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${data.error}</p></div>`; return; }
                 const total = parseFloat(data.total);
                 const grandTotal = total + deliveryCost;
+                const extrasHtml = (data.extras || []).length ? data.extras.map(e =>
+                    `<div class="price-row"><span>✨ ${e.description}</span><span class="value">+$${parseFloat(e.amount).toFixed(2)}</span></div>`).join('') : '';
                 display.innerHTML = `
                     <div class="price-row"><span>🧾 Ingredientes</span><span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>👨‍🍳 Mano de obra</span><span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>🎨 Recargo por diseño</span><span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span></div>
+                    ${extrasHtml}
                     <div class="price-row"><span>💵 Beneficio (${data.benefit_percentage}%)</span><span class="value">+$${parseFloat(data.benefit_amount).toFixed(2)}</span></div>
                     <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.unit_price).toFixed(2)}</span></div>
                     <div class="price-row total"><span>📦 Subtotal (${persons} pers.)</span><span class="value">$${total.toFixed(2)}</span></div>
