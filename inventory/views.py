@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 import json
 import io
 from weasyprint import HTML
-from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag
+from .models import Product, Order, Purchase, RawProduct, Client, Quote, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag, calculate_components_cost
+from .image_utils import save_optimized_product_image
 
 
 def parse_decimal(value, default=Decimal('0')):
@@ -30,6 +31,7 @@ def parse_decimal(value, default=Decimal('0')):
 
 def product_gallery(request):
     products = Product.objects.filter(is_available=True, show_in_gallery=True)
+    featured_products = products.filter(featured=True)
     category = request.GET.get('category')
     tag_id = request.GET.get('tag')
     gender = request.GET.get('gender')
@@ -44,6 +46,7 @@ def product_gallery(request):
     event_tags = EventTag.objects.order_by('name')
     return render(request, 'inventory/gallery.html', {
         'products': products, 'categories': categories,
+        'featured_products': featured_products,
         'selected_category': category, 'event_tags': event_tags,
         'selected_tag': int(tag_id) if tag_id else None,
         'selected_gender': gender,
@@ -81,11 +84,17 @@ def quote_edit(request, pk):
     quote = get_object_or_404(Quote, pk=pk)
     if request.method == 'POST':
         try:
-            quote.product = Product.objects.get(id=request.POST['product'])
             quote.client = Client.objects.get(id=request.POST['client'])
             quote.persons = int(request.POST['persons'])
+            quote.name = request.POST.get('name', '').strip() or quote.cake_name
+            quote.base_bread_id = request.POST.get('base_bread') or None
+            quote.filling_id = request.POST.get('filling') or None
+            quote.topping_id = request.POST.get('topping') or None
+            quote.complexity_tier_id = request.POST.get('complexity_tier') or None
+            quote.benefit_percentage = parse_decimal(request.POST.get('benefit', '50'))
             quote.design_notes = request.POST.get('design_notes', '').strip()
             quote.delivery_cost = parse_decimal(request.POST.get('delivery_cost', '0'))
+            quote.show_delivery_on_pdf = request.POST.get('show_delivery_on_pdf') == 'on'
             quote.due_date = request.POST.get('due_date', None) or None
             quote.recalculate()
             quote.save()
@@ -95,7 +104,9 @@ def quote_edit(request, pk):
             messages.error(request, 'Datos inválidos.')
 
     return render(request, 'control/quote_form.html', {
-        'products': Product.objects.filter(is_available=True).order_by('name'),
+        'breads': BaseBread.objects.filter(is_available=True),
+        'fillings': Filling.objects.filter(is_available=True),
+        'toppings': Topping.objects.filter(is_available=True),
         'tiers': ComplexityTier.objects.all(),
         'clients': Client.objects.order_by('name'),
         'quote': quote,
@@ -131,17 +142,24 @@ def quote_approve(request, pk):
     if quote.status == 'sent':
         quote.status = 'accepted'
         quote.save(update_fields=['status'])
-        Order.objects.create(
+        product = quote.ensure_product()
+        order = Order.objects.create(
             client=quote.client,
-            product=quote.product,
+            product=product,
             persons=quote.persons,
             unit_price=quote.unit_price,
             design_notes=quote.design_notes,
             design_surcharge=quote.design_surcharge,
             labor_cost=quote.labor_cost,
-            total_price=quote.total_price,
             delivery_cost=quote.delivery_cost,
+            total_price=quote.total_price,
             notes=f"Convertido de Cotización #{quote.pk}",
+        )
+        Order.objects.filter(pk=order.pk).update(
+            unit_price=quote.unit_price,
+            design_surcharge=quote.design_surcharge,
+            labor_cost=quote.labor_cost,
+            total_price=quote.total_price,
         )
         messages.success(request, f'Cotización #{quote.pk} aprobada. Pedido creado.')
     return redirect('quotes_list')
@@ -200,6 +218,7 @@ def product_create(request):
             price=parse_decimal(request.POST.get('price', '0')),
             is_available=request.POST.get('is_available') == 'on',
             show_in_gallery=request.POST.get('show_in_gallery') == 'on',
+            featured=request.POST.get('featured') == 'on',
             design_description=request.POST.get('design_description', ''),
             color_scheme=request.POST.get('color_scheme', ''),
             gender=request.POST.get('gender', ''),
@@ -220,6 +239,9 @@ def product_create(request):
             product.min_persons = int(request.POST['min_persons'])
         if request.POST.get('max_persons'):
             product.max_persons = int(request.POST['max_persons'])
+        image_file = save_optimized_product_image(request.FILES.get('image'))
+        if image_file:
+            product.image = image_file
         product.save()
         event_tag_ids = request.POST.getlist('event_tags')
         if event_tag_ids:
@@ -254,9 +276,13 @@ def product_edit(request, pk):
         product.max_persons = int(request.POST.get('max_persons', '100'))
         product.is_available = request.POST.get('is_available') == 'on'
         product.show_in_gallery = request.POST.get('show_in_gallery') == 'on'
+        product.featured = request.POST.get('featured') == 'on'
         product.design_description = request.POST.get('design_description', product.design_description or '')
         product.color_scheme = request.POST.get('color_scheme', product.color_scheme or '')
         product.gender = request.POST.get('gender', product.gender or '')
+        image_file = save_optimized_product_image(request.FILES.get('image'))
+        if image_file:
+            product.image = image_file
         product.save()
         event_tag_ids = request.POST.getlist('event_tags')
         if event_tag_ids:
@@ -949,25 +975,7 @@ def product_quick_create(request):
                 'tiers': tiers, 'clients': clients,
             })
 
-        # 1. Create the product
-        product = Product(
-            name=name,
-            category='cake',
-            description=request.POST.get('description', ''),
-            price=Decimal(0),
-            is_available=True,
-        )
-        if request.POST.get('base_bread'):
-            product.base_bread_id = int(request.POST['base_bread'])
-        if request.POST.get('filling'):
-            product.filling_id = int(request.POST['filling'])
-        if request.POST.get('topping'):
-            product.topping_id = int(request.POST['topping'])
-        if request.POST.get('complexity_tier'):
-            product.complexity_tier_id = int(request.POST['complexity_tier'])
-        product.save()
-
-        # 2. Get or create client
+        # 1. Get or create client
         client_id = request.POST.get('client')
         if client_id == '__new__':
             client = Client.objects.create(
@@ -978,21 +986,32 @@ def product_quick_create(request):
         else:
             client = get_object_or_404(Client, pk=client_id)
 
-        # 3. Create the quote with status 'sent'
+        # 2. Create the quote (no product yet — only on sale)
         persons = int(request.POST.get('persons', 1))
         delivery_cost = parse_decimal(request.POST.get('delivery_cost', '0'))
+        benefit = parse_decimal(request.POST.get('benefit', '50'))
         due_date_str = request.POST.get('due_date', '')
         due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else (datetime.now() + timedelta(days=15)).date()
 
         quote = Quote(
             client=client,
-            product=product,
+            name=name,
             persons=persons,
             design_notes=request.POST.get('design_notes', ''),
             delivery_cost=delivery_cost,
+            show_delivery_on_pdf=request.POST.get('show_delivery_on_pdf') == 'on',
+            benefit_percentage=benefit,
             due_date=due_date,
             status='sent',
         )
+        if request.POST.get('base_bread'):
+            quote.base_bread_id = int(request.POST['base_bread'])
+        if request.POST.get('filling'):
+            quote.filling_id = int(request.POST['filling'])
+        if request.POST.get('topping'):
+            quote.topping_id = int(request.POST['topping'])
+        if request.POST.get('complexity_tier'):
+            quote.complexity_tier_id = int(request.POST['complexity_tier'])
         quote.recalculate()
         quote.save()
 
@@ -1375,60 +1394,62 @@ def api_calculate_price(request):
 @login_required
 def api_calculate_price_rapido(request):
     try:
+        from decimal import Decimal
         persons = int(request.GET.get('persons', 1))
         tier_id = request.GET.get('complexity_tier')
+        benefit = Decimal(request.GET.get('benefit', '50') or '50')
 
-        # Build a temporary product object just for price calculation
-        from decimal import Decimal
         base_bread_id = request.GET.get('base_bread')
         filling_id = request.GET.get('filling')
         topping_id = request.GET.get('topping')
 
-        class TempProduct:
-            category = 'cake'
-            base_labor_per_portion = Decimal('0')
-            complexity_tier = None
-            base_bread_id = None
-            filling_id = None
-            topping_id = None
-            def calculate_cost(self): return Decimal('0')
-            def calculate_price_for(self, p):
-                persons = Decimal(str(p))
-                base_cost = self.base_bread.cost_per_portion() if self.base_bread else Decimal('0')
-                filling_cost = self.filling.cost_per_portion() if self.filling else Decimal('0')
-                topping_cost = self.topping.cost_per_portion() if self.topping else Decimal('0')
-                ingredient_cost = (base_cost + filling_cost + topping_cost) * persons
-                base_labor = self.base_bread.base_labor_per_portion if self.base_bread else Decimal('0')
-                filling_labor = self.filling.base_labor_per_portion if self.filling else Decimal('0')
-                topping_labor = self.topping.base_labor_per_portion if self.topping else Decimal('0')
-                labor_cost = (base_labor + filling_labor + topping_labor) * persons
-                base_total = ingredient_cost + labor_cost
-                if self.complexity_tier:
-                    surcharge = base_total * (self.complexity_tier.surcharge_percentage / Decimal('100'))
-                else:
-                    surcharge = Decimal('0')
-                return {
-                    'persons': persons,
-                    'ingredient_cost': ingredient_cost,
-                    'labor_cost': labor_cost,
-                    'base_total': base_total,
-                    'design_surcharge': surcharge,
-                    'total': base_total + surcharge,
-                    'price_per_person': (base_total + surcharge) / persons if persons > 0 else Decimal('0'),
-                }
+        base_bread = get_object_or_404(BaseBread, pk=base_bread_id) if base_bread_id else None
+        filling = get_object_or_404(Filling, pk=filling_id) if filling_id else None
+        topping = get_object_or_404(Topping, pk=topping_id) if topping_id else None
+        tier = get_object_or_404(ComplexityTier, pk=tier_id) if tier_id else None
 
-        tmp = TempProduct()
-        if base_bread_id:
-            tmp.base_bread = get_object_or_404(BaseBread, pk=base_bread_id)
-        if filling_id:
-            tmp.filling = get_object_or_404(Filling, pk=filling_id)
-        if topping_id:
-            tmp.topping = get_object_or_404(Topping, pk=topping_id)
-        if tier_id:
-            tmp.complexity_tier = get_object_or_404(ComplexityTier, pk=tier_id)
+        b = calculate_components_cost(base_bread, filling, topping, tier, persons, benefit)
 
-        b = tmp.calculate_price_for(persons)
-        return JsonResponse({k: str(v) for k, v in b.items()})
+        def _component(key, comp):
+            if comp is None:
+                return None
+            ing_cost = comp.cost_per_portion()
+            labor = comp.base_labor_per_portion or Decimal('0')
+            details = []
+            for ing in comp.ingredients.select_related('raw_product').order_by('raw_product__name'):
+                details.append({
+                    'name': ing.raw_product.name,
+                    'qty': str(ing.quantity),
+                    'unit': ing.raw_product.get_unit_display(),
+                    'per_portion': str(ing.cost),
+                    'total': str(ing.cost * persons),
+                })
+            return {
+                'key': key,
+                'name': comp.name,
+                'ingredients_total': str(ing_cost * persons),
+                'labor_total': str(labor * persons),
+                'total': str((ing_cost + labor) * persons),
+                'per_portion': str(ing_cost + labor),
+                'details': details,
+            }
+
+        response = {
+            'persons': str(persons),
+            'ingredient_cost': str(b['ingredient_cost']),
+            'labor_cost': str(b['labor_cost']),
+            'design_surcharge': str(b['design_surcharge']),
+            'benefit_amount': str(b['benefit_amount']),
+            'benefit_percentage': str(benefit),
+            'unit_price': str(b['unit_price']),
+            'total': str(b['total']),
+        }
+        response['components'] = [
+            _component('base_bread', base_bread),
+            _component('filling', filling),
+            _component('topping', topping),
+        ]
+        return JsonResponse(response)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
@@ -1477,6 +1498,99 @@ def client_login(request):
 def client_logout(request):
     logout(request)
     return redirect('gallery')
+
+
+# ── Client Quote Flow ─────────────────────────────────────────────────────────
+
+@require_POST
+def submit_inquiry(request, product_id):
+    product = get_object_or_404(Product, id=product_id, is_available=True)
+    try:
+        persons = int(request.POST.get('persons', 1))
+    except ValueError:
+        persons = 1
+
+    if request.user.is_authenticated:
+        client = Client.objects.filter(user=request.user).first()
+        if client is None:
+            messages.error(request, 'Tu cuenta no tiene perfil de cliente asociado.')
+            return redirect('product_detail', product_id=product.id)
+    else:
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        if not name or not email:
+            messages.error(request, 'Nombre y correo son obligatorios para solicitar una cotización.')
+            return redirect('product_detail', product_id=product.id)
+        client = Client.objects.filter(email=email).first()
+        if client is None:
+            client = Client.objects.create(name=name, email=email, phone=phone)
+
+    quote = Quote(
+        client=client,
+        product=product,
+        name=product.name,
+        persons=persons,
+        design_notes=request.POST.get('design_notes', '').strip(),
+        due_date=(datetime.now() + timedelta(days=15)).date(),
+        status='draft',
+    )
+    quote.recalculate()
+    quote.save()
+    messages.success(request, '¡Cotización solicitada! La revisaremos y te contactaremos pronto.')
+    return redirect('product_detail', product_id=product.id)
+
+
+@login_required
+def client_portal(request):
+    client = Client.objects.filter(user=request.user).first()
+    if client is None:
+        messages.error(request, 'No tienes un perfil de cliente.')
+        return redirect('gallery')
+    quotes = Quote.objects.filter(client=client).select_related('product').order_by('-created_at')
+    orders = Order.objects.filter(client=client).select_related('product').order_by('-order_date')
+    return render(request, 'client_portal.html', {'client': client, 'quotes': quotes, 'orders': orders})
+
+
+@login_required
+@require_POST
+def accept_quote(request, pk):
+    quote = get_object_or_404(Quote, pk=pk, client__user=request.user)
+    if quote.status == 'sent':
+        quote.status = 'accepted'
+        quote.save(update_fields=['status'])
+        product = quote.ensure_product()
+        order = Order.objects.create(
+            client=quote.client,
+            product=product,
+            persons=quote.persons,
+            unit_price=quote.unit_price,
+            design_notes=quote.design_notes,
+            design_surcharge=quote.design_surcharge,
+            labor_cost=quote.labor_cost,
+            total_price=quote.total_price,
+            delivery_cost=quote.delivery_cost,
+            notes=f"Convertido de Cotización #{quote.pk}",
+        )
+        Order.objects.filter(pk=order.pk).update(
+            unit_price=quote.unit_price,
+            design_surcharge=quote.design_surcharge,
+            labor_cost=quote.labor_cost,
+            total_price=quote.total_price,
+        )
+        messages.success(request, '✅ Cotización aceptada. Tu pedido ha sido creado.')
+    return redirect('client_portal')
+
+
+@login_required
+@require_POST
+def reject_quote(request, pk):
+    quote = get_object_or_404(Quote, pk=pk, client__user=request.user)
+    if quote.status == 'sent':
+        quote.status = 'rejected'
+        quote.save(update_fields=['status'])
+        messages.success(request, 'Cotización rechazada.')
+    return redirect('client_portal')
 
 
 # ── Client Portal ────────────────────────────────────────────────────────────

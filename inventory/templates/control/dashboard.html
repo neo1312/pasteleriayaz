@@ -481,7 +481,7 @@
                                 <tr>
                                     <td>{{ quote.id }}</td>
                                     <td>{{ quote.client.name }}</td>
-                                    <td>{{ quote.product.name }}</td>
+                                    <td>{{ quote.cake_name }}</td>
                                     <td>{{ quote.persons }}</td>
                                     <td class="amount">${{ quote.grand_total|floatformat:2 }}</td>
                                     <td><span class="status-badge {{ quote.status }}">{{ quote.get_status_display }}</span></td>

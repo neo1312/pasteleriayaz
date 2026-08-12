@@ -15,13 +15,13 @@
 <div class="card">
     {% if fillings %}
     <table>
-        <thead><tr><th>Nombre</th><th>Descripción</th><th>Mano de obra x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Descripción</th><th>Costo total x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
         <tbody>
             {% for f in fillings %}
             <tr>
                 <td><strong>{{ f.name }}</strong></td>
                 <td>{{ f.description|default:'—'|truncatechars:60 }}</td>
-                <td class="amount">${{ f.base_labor_per_portion|floatformat:2 }}</td>
+                <td class="amount">${{ f.total_cost_per_portion|floatformat:2 }}</td>
                 <td>{% if f.is_available %}✅{% else %}❌{% endif %}</td>
                 <td class="actions">
                     <a href="{% url 'filling_edit' f.id %}" class="btn btn-sm btn-primary">Editar</a>

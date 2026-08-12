@@ -12,6 +12,15 @@
     .inline-add { margin-top: 6px; }
     .inline-add a { color: #d4a373; font-size: 0.85em; cursor: pointer; text-decoration: none; }
     .inline-add a:hover { text-decoration: underline; }
+    .comp-block { border: 1px solid #e8d4c0; border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+    .comp-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; cursor: pointer; background: #faf8f3; font-weight: 600; color: #3d2817; }
+    .comp-head:hover { background: #f5ede0; }
+    .comp-head .value { font-weight: 700; }
+    .comp-head .caret { color: #d4a373; }
+    .comp-detail { padding: 4px 14px 12px; border-top: 1px solid #e8d4c0; display: none; }
+    .comp-detail .price-row { padding: 5px 0; font-size: 0.88em; color: #555; }
+    .comp-detail .price-row.sub { border-top: 1px dashed #d4a373; margin-top: 4px; padding-top: 8px; font-weight: 700; color: #3d2817; }
+    .components-title { font-size: 0.9em; font-weight: 700; color: #8b6914; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     @media (max-width: 768px) { .maker-grid { grid-template-columns: 1fr; } }
 </style>
 
@@ -104,6 +113,10 @@
                 <input type="number" id="id_persons" value="1" min="1" max="1000" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
             </div>
             <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">% Beneficio</label>
+                <input type="number" id="id_benefit" value="50" step="0.01" min="0" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Notas de diseño</label>
                 <textarea id="id_design_notes" placeholder="Decoración, colores, mensaje personalizado..." style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:60px;"></textarea>
             </div>
@@ -116,6 +129,11 @@
                     <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Vence</label>
                     <input type="date" id="id_due_date" value="{{ ''|date:'Y-m-d' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
                 </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                    <input type="checkbox" id="id_show_delivery_pdf"> Incluir costo de envío en el PDF
+                </label>
             </div>
         </div>
 
@@ -141,6 +159,18 @@
         document.getElementById('newClientFields').style.display = val === '__new__' ? 'block' : 'none';
     }
 
+    function toggleComp(head) {
+        const detail = head.parentElement.querySelector('.comp-detail');
+        const caret = head.querySelector('.caret');
+        if (detail.style.display === 'none') {
+            detail.style.display = 'block';
+            caret.textContent = '▴';
+        } else {
+            detail.style.display = 'none';
+            caret.textContent = '▾';
+        }
+    }
+
     function getFormData() {
         return {
             base_bread: document.getElementById('id_base_bread').value,
@@ -148,6 +178,7 @@
             topping: document.getElementById('id_topping').value,
             complexity_tier: document.getElementById('id_complexity_tier').value,
             persons: parseInt(document.getElementById('id_persons').value) || 1,
+            benefit: parseFloat(document.getElementById('id_benefit').value) || 0,
             delivery_cost: parseFloat(document.getElementById('id_delivery_cost').value) || 0,
         };
     }
@@ -168,6 +199,7 @@
         const params = new URLSearchParams({
             product: 0,  // will be handled server-side
             persons: persons,
+            benefit: data.benefit,
             complexity_tier: data.complexity_tier || '',
             base_bread: data.base_bread || '',
             filling: data.filling || '',
@@ -183,11 +215,31 @@
                 }
                 const total = parseFloat(data.total);
                 const grandTotal = total + deliveryCost;
-                display.innerHTML = `
+                const comps = (data.components || []).filter(Boolean);
+                const icons = { base_bread: '🍰', filling: '🥫', topping: '🎂' };
+                const compLabels = { base_bread: 'Base Pastel', filling: 'Relleno', topping: 'Cubierta' };
+                const compHtml = comps.length ? `
+                    <div class="components-title">Desglose por componente</div>
+                    ${comps.map(c => `
+                        <div class="comp-block">
+                            <div class="comp-head" onclick="toggleComp(this)">
+                                <span>${icons[c.key] || '🍰'} ${compLabels[c.key] || ''} · ${c.name}</span>
+                                <span class="value">$${parseFloat(c.total).toFixed(2)}</span>
+                                <span class="caret">▾</span>
+                            </div>
+                            <div class="comp-detail">
+                                ${c.details.map(d => `<div class="price-row"><span>· ${d.name} (${d.qty} ${d.unit})</span><span>$${parseFloat(d.total).toFixed(2)}</span></div>`).join('')}
+                                ${c.details.length ? '' : '<div class="price-row"><span>· Sin ingredientes</span><span>$0.00</span></div>'}
+                                <div class="price-row"><span>· Mano de obra</span><span>$${parseFloat(c.labor_total).toFixed(2)}</span></div>
+                                <div class="price-row sub"><span>Subtotal ${c.name}</span><span>$${parseFloat(c.total).toFixed(2)}</span></div>
+                            </div>
+                        </div>`).join('')}` : '';
+                display.innerHTML = compHtml + `
                     <div class="price-row"><span>🧾 Ingredientes</span><span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>👨‍🍳 Mano de obra</span><span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>🎨 Recargo por diseño</span><span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span></div>
-                    <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.price_per_person).toFixed(2)}</span></div>
+                    <div class="price-row"><span>💵 Beneficio (${data.benefit_percentage}%)</span><span class="value">+$${parseFloat(data.benefit_amount).toFixed(2)}</span></div>
+                    <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.unit_price).toFixed(2)}</span></div>
                     <div class="price-row total"><span>📦 Subtotal (${persons} pers.)</span><span class="value">$${total.toFixed(2)}</span></div>
                     ${deliveryCost > 0 ? `<div class="price-row"><span>🚚 Envío</span><span class="value">+$${deliveryCost.toFixed(2)}</span></div>
                     <div class="price-row total"><span>🏆 Gran Total</span><span class="value">$${grandTotal.toFixed(2)}</span></div>` : ''}
@@ -226,8 +278,10 @@
             data.append('complexity_tier', document.getElementById('id_complexity_tier').value || '');
             data.append('client', cid);
             data.append('persons', persons);
+            data.append('benefit', document.getElementById('id_benefit').value || '50');
             data.append('design_notes', document.getElementById('id_design_notes').value || '');
             data.append('delivery_cost', document.getElementById('id_delivery_cost').value || '0');
+            data.append('show_delivery_on_pdf', document.getElementById('id_show_delivery_pdf').checked ? 'on' : '');
             data.append('due_date', document.getElementById('id_due_date').value || '');
 
             fetch('{% url "product_quick_create" %}', {
@@ -237,7 +291,17 @@
             })
             .then(r => {
                 if (r.redirected) {
-                    window.location.href = r.url;
+                    // Descarga el PDF sin navegar, luego va a la lista de cotizaciones
+                    var a = document.createElement('a');
+                    a.href = r.url;
+                    a.download = '';
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(function() {
+                        window.location.href = '{% url "quotes_list" %}';
+                    }, 1200);
                 } else {
                     r.json().then(resp => {
                         if (resp.error) { alert(resp.error); btn.disabled = false; btn.textContent = '🚀 Crear Cotización y PDF'; }

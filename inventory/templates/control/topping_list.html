@@ -15,13 +15,13 @@
 <div class="card">
     {% if toppings %}
     <table>
-        <thead><tr><th>Nombre</th><th>Descripción</th><th>Mano de obra x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Descripción</th><th>Costo total x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
         <tbody>
             {% for t in toppings %}
             <tr>
                 <td><strong>{{ t.name }}</strong></td>
                 <td>{{ t.description|default:'—'|truncatechars:60 }}</td>
-                <td class="amount">${{ t.base_labor_per_portion|floatformat:2 }}</td>
+                <td class="amount">${{ t.total_cost_per_portion|floatformat:2 }}</td>
                 <td>{% if t.is_available %}✅{% else %}❌{% endif %}</td>
                 <td class="actions">
                     <a href="{% url 'topping_edit' t.id %}" class="btn btn-sm btn-primary">Editar</a>

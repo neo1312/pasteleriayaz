@@ -12,14 +12,17 @@
   .quote-info .block { width: 48%; }
   .quote-info .block h3 { font-size: 11pt; margin: 0 0 6px; color: #d4a373; text-transform: uppercase; letter-spacing: 1px; }
   .quote-info .block p { margin: 2px 0; font-size: 10pt; color: #555; }
-  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-  th { background: #f5f1e8; text-align: left; padding: 10px 12px; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.5px; color: #3d2817; }
-  td { padding: 10px 12px; border-bottom: 1px solid #e8d4c0; font-size: 10pt; }
+  .cake-title { text-align: center; margin: 25px 0 5px; }
+  .cake-title h2 { font-size: 18pt; margin: 0; color: #3d2817; }
+  .cake-title .components { color: #888; font-size: 11pt; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+  th { background: #f5f1e8; text-align: left; padding: 12px; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.5px; color: #3d2817; }
+  td { padding: 12px; border-bottom: 1px solid #e8d4c0; font-size: 11pt; }
   .amount { text-align: right; font-weight: 600; }
-  .total-row td { border-top: 2px solid #d4a373; font-weight: 700; font-size: 11pt; padding-top: 12px; }
+  .total-row td { border-top: 2px solid #d4a373; font-weight: 700; font-size: 12pt; }
+  .grand-row td { background: #faf8f3; border-top: 2px solid #d4a373; font-weight: 800; font-size: 14pt; color: #3d2817; }
   .notes { margin-top: 25px; padding: 15px; background: #faf8f3; border-radius: 8px; font-size: 10pt; color: #555; }
   .footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9pt; color: #aaa; border-top: 1px solid #e8d4c0; padding-top: 10px; }
-  .badge { display: inline-block; background: #fae8d6; color: #8b6914; padding: 3px 8px; border-radius: 4px; font-size: 9pt; margin-right: 4px; }
 </style>
 </head>
 <body>
@@ -39,74 +42,38 @@
     <h3>Cotización #{{ quote.id }}</h3>
     <p>Fecha: {{ quote.created_at|date:"d/m/Y" }}</p>
     <p>Vence: {{ quote.due_date|date:"d/m/Y" }}</p>
+    <p>👥 {{ quote.persons }} persona(s)</p>
   </div>
 </div>
 
-<h2 style="font-size:14pt;margin-bottom:5px;">{{ quote.product.name }}</h2>
-{% if quote.product.short_description %}
-<p style="color:#888;font-size:10pt;margin-bottom:15px;">{{ quote.product.short_description }}</p>
-{% endif %}
+<div class="cake-title">
+  <h2>🎂 {{ quote.cake_name }}</h2>
+</div>
 
 <table>
   <tr>
-    <th style="width:50%;">Concepto</th>
-    <th style="width:15%;" class="amount">Por persona</th>
-    <th style="width:15%;" class="amount">× {{ quote.persons }} pers.</th>
-    <th style="width:20%;" class="amount">Total</th>
+    <th>Concepto</th>
+    <th style="width:30%;" class="amount">Total</th>
   </tr>
   <tr>
-    <td>🧾 Ingredientes</td>
-    <td class="amount">${{ quote.product.calculate_price_for.ingredient_cost|default:"0"|floatformat:2 }}</td>
-    <td></td>
-    <td class="amount">${{ quote.ingredient_cost|floatformat:2 }}</td>
+    <td>Precio por persona ({{ quote.persons }} pers. × ${{ quote.unit_price|floatformat:2 }})</td>
+    <td class="amount">${{ quote.total_price|floatformat:2 }}</td>
   </tr>
-  <tr>
-    <td>👨‍🍳 Mano de obra</td>
-    <td class="amount">${{ quote.product.calculate_price_for.labor_cost|default:"0"|floatformat:2 }}</td>
-    <td></td>
-    <td class="amount">${{ quote.labor_cost|floatformat:2 }}</td>
-  </tr>
-  <tr>
-    <td>🎨 Recargo por diseño</td>
-    <td class="amount">${{ quote.design_surcharge|floatformat:2 }}</td>
-    <td></td>
-    <td class="amount">${{ quote.design_surcharge|floatformat:2 }}</td>
-  </tr>
-  <tr>
-    <td>💰 Precio unitario</td>
-    <td class="amount"><strong>${{ quote.unit_price|floatformat:2 }}</strong></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr class="total-row">
-    <td><strong>📦 Subtotal</strong></td>
-    <td></td>
-    <td class="amount"><strong>${{ quote.total_price|floatformat:2 }}</strong></td>
-    <td></td>
-  </tr>
-  {% if quote.delivery_cost %}
+  {% if quote.show_delivery_on_pdf and quote.delivery_cost %}
   <tr>
     <td>🚚 Envío</td>
-    <td></td>
-    <td></td>
     <td class="amount">+${{ quote.delivery_cost|floatformat:2 }}</td>
   </tr>
   {% endif %}
-  <tr class="total-row">
-    <td><strong>🏆 Gran Total</strong></td>
-    <td></td>
-    <td></td>
-    <td class="amount"><strong>${{ quote.grand_total|floatformat:2 }}</strong></td>
+  <tr class="grand-row">
+    <td>🏆 Total</td>
+    <td class="amount">${{ quote.grand_total|floatformat:2 }}</td>
   </tr>
 </table>
 
-{% if quote.product.event_tags.all %}
-<div style="margin:15px 0;">
-  {% for t in quote.product.event_tags.all %}
-  <span class="badge">{{ t.name }}</span>
-  {% endfor %}
+<div style="margin:30px 0 25px;padding:18px 20px;background:#faf8f3;border-left:4px solid #d4a373;border-radius:8px;font-size:10.5pt;color:#3d2817;line-height:1.6;">
+  En Pastelería Zaret preparamos nuestros pasteles con materias primas de calidad, elaborados con limpieza, dedicación y mucho cariño, para que tú y tus seres queridos tengan una experiencia de sabor inolvidable. Cada pastel es único y personalizado, porque cada cliente es especial para nosotros.
 </div>
-{% endif %}
 
 {% if quote.design_notes %}
 <div class="notes">

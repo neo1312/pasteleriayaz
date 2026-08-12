@@ -90,6 +90,7 @@
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 30px;
             margin-bottom: 60px;
+            align-items: start;
         }
 
         .product-card {
@@ -109,7 +110,7 @@
 
         .product-image {
             width: 100%;
-            height: 250px;
+            aspect-ratio: 3 / 4;
             background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c0 100%);
             display: flex;
             align-items: center;
@@ -123,6 +124,69 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        /* Destacados swipe strip */
+        .featured-section {
+            margin-bottom: 40px;
+        }
+        .featured-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.4em;
+            color: #3d2817;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .featured-strip {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x mandatory;
+            padding-bottom: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: #d4a373 transparent;
+        }
+        .featured-strip::-webkit-scrollbar {
+            height: 6px;
+        }
+        .featured-strip::-webkit-scrollbar-thumb {
+            background: #d4a373;
+            border-radius: 3px;
+        }
+        .featured-card {
+            flex: 0 0 260px;
+            scroll-snap-align: start;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .featured-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
+        .featured-card .product-image {
+            aspect-ratio: 3 / 4;
+            font-size: 60px;
+        }
+        .featured-card .product-info {
+            padding: 14px 16px;
+        }
+        .featured-card .product-name {
+            font-size: 1.1em;
+            margin-bottom: 4px;
+            font-weight: 600;
+            color: #3d2817;
+        }
+        .featured-card .product-category {
+            margin-bottom: 6px;
         }
 
         .product-image.no-image {
@@ -224,7 +288,7 @@
         }
         .modal .close-btn:hover { color:#333; }
         .modal .modal-image {
-            width:100%; height:250px; object-fit:cover; border-radius:8px; margin-bottom:15px;
+            width:100%; max-height:70vh; object-fit:contain; border-radius:8px; margin-bottom:15px;
         }
         .modal .modal-category {
             display:inline-block; background:#fae8d6; color:#8b6914;
@@ -258,7 +322,6 @@
             }
 
             .product-image {
-                height: 200px;
                 font-size: 60px;
             }
 
@@ -282,6 +345,29 @@
     </header>
 
     <div class="container">
+        {% if featured_products %}
+        <div class="featured-section">
+            <h2 class="featured-title">⭐ Destacados</h2>
+            <div class="featured-strip">
+                {% for product in featured_products %}
+                    <div class="featured-card" onclick="openProductModal('{{ product.name|escapejs }}', '{% if product.image %}{{ product.image.url }}{% endif %}', '{{ product.get_category_display|escapejs }}', '{{ product.short_description|default:product.description|escapejs }}', '{{ product.design_description|escapejs }}', '{{ product.color_scheme|escapejs }}', '{{ product.get_gender_display|escapejs }}', [{% for t in product.event_tags.all %}'{{ t.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}])">
+                        <div class="product-image {% if not product.image %}no-image{% endif %}">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                            {% else %}
+                                🥐
+                            {% endif %}
+                        </div>
+                        <div class="product-info">
+                            <span class="product-category">{{ product.get_category_display }}</span>
+                            <h3 class="product-name">{{ product.name }}</h3>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="filters">
             <a href="{% url 'gallery' %}" class="filter-btn {% if not selected_category and not selected_tag and not selected_gender %}active{% endif %}">
                 Todos los Productos
@@ -315,7 +401,7 @@
                     <div class="product-card" onclick="openProductModal('{{ product.name|escapejs }}', '{% if product.image %}{{ product.image.url }}{% endif %}', '{{ product.get_category_display|escapejs }}', '{{ product.short_description|default:product.description|escapejs }}', '{{ product.design_description|escapejs }}', '{{ product.color_scheme|escapejs }}', '{{ product.get_gender_display|escapejs }}', [{% for t in product.event_tags.all %}'{{ t.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}])">
                         <div class="product-image {% if not product.image %}no-image{% endif %}">
                             {% if product.image %}
-                                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
                             {% else %}
                                 🥐
                             {% endif %}

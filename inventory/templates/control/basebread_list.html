@@ -15,13 +15,13 @@
 <div class="card">
     {% if breads %}
     <table>
-        <thead><tr><th>Nombre</th><th>Descripción</th><th>Mano de obra x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Descripción</th><th>Costo total x porción</th><th>Disponible</th><th>Acciones</th></tr></thead>
         <tbody>
             {% for b in breads %}
             <tr>
                 <td><strong>{{ b.name }}</strong></td>
                 <td>{{ b.description|default:'—'|truncatechars:60 }}</td>
-                <td class="amount">${{ b.base_labor_per_portion|floatformat:2 }}</td>
+                <td class="amount">${{ b.total_cost_per_portion|floatformat:2 }}</td>
                 <td>{% if b.is_available %}✅{% else %}❌{% endif %}</td>
                 <td class="actions">
                     <a href="{% url 'base_bread_edit' b.id %}" class="btn btn-sm btn-primary">Editar</a>

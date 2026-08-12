@@ -130,4 +130,10 @@ urlpatterns = [
     path('registro/', views.register, name='register'),
     path('ingresar/', views.client_login, name='login'),
     path('salir/', views.client_logout, name='logout'),
+
+    # Cliente — quote flow
+    path('productos/<int:product_id>/cotizar/', views.submit_inquiry, name='submit_inquiry'),
+    path('mi-cuenta/', views.client_portal, name='client_portal'),
+    path('cotizaciones/<int:pk>/aceptar/', views.accept_quote, name='accept_quote'),
+    path('cotizaciones/<int:pk>/rechazar/', views.reject_quote, name='reject_quote'),
 ]

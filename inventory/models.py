@@ -27,6 +27,41 @@ def _conversion_factor(from_unit, to_unit):
     return _UNIT_FACTORS.get((from_unit, to_unit), Decimal('1'))
 
 
+def calculate_components_cost(base_bread, filling, topping, complexity_tier, persons, benefit_percentage):
+    """Desglose de costos para un pastel armado por componentes (incluye beneficio).
+
+    Returns totals for all ``persons`` plus the unit price per person.
+    """
+    persons = Decimal(str(persons))
+    pct = Decimal('100')
+    ing_per = Decimal('0')
+    labor_per = Decimal('0')
+    if base_bread:
+        ing_per += base_bread.cost_per_portion()
+        labor_per += base_bread.base_labor_per_portion or Decimal('0')
+    if filling:
+        ing_per += filling.cost_per_portion()
+        labor_per += filling.base_labor_per_portion or Decimal('0')
+    if topping:
+        ing_per += topping.cost_per_portion()
+        labor_per += topping.base_labor_per_portion or Decimal('0')
+
+    base_per = ing_per + labor_per
+    design_pct = complexity_tier.surcharge_percentage if complexity_tier else Decimal('0')
+    design_per = base_per * design_pct / pct
+    benefit_per = (base_per + design_per) * (benefit_percentage or Decimal('0')) / pct
+    total_per = base_per + design_per + benefit_per
+
+    return {
+        'ingredient_cost': ing_per * persons,
+        'labor_cost': labor_per * persons,
+        'design_surcharge': design_per * persons,
+        'benefit_amount': benefit_per * persons,
+        'unit_price': total_per,
+        'total': total_per * persons,
+    }
+
+
 class ComplexityTier(models.Model):
     name = models.CharField(max_length=50, verbose_name="Nombre")
     surcharge_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Recargo %")
@@ -72,6 +107,10 @@ class BaseBread(models.Model):
             total += ing.quantity * factor * unit_cost
         return total
 
+    @property
+    def total_cost_per_portion(self):
+        return self.cost_per_portion() + (self.base_labor_per_portion or Decimal('0'))
+
     def __str__(self):
         return self.name
 
@@ -97,6 +136,10 @@ class Filling(models.Model):
             factor = _conversion_factor(ing.unit, rp.unit)
             total += ing.quantity * factor * unit_cost
         return total
+
+    @property
+    def total_cost_per_portion(self):
+        return self.cost_per_portion() + (self.base_labor_per_portion or Decimal('0'))
 
     def __str__(self):
         return self.name
@@ -124,6 +167,10 @@ class Topping(models.Model):
             total += ing.quantity * factor * unit_cost
         return total
 
+    @property
+    def total_cost_per_portion(self):
+        return self.cost_per_portion() + (self.base_labor_per_portion or Decimal('0'))
+
     def __str__(self):
         return self.name
 
@@ -146,6 +193,12 @@ class BaseBreadIngredient(models.Model):
     def unit(self):
         return self.raw_product.unit
 
+    @property
+    def cost(self):
+        rp = self.raw_product
+        unit_cost = rp.average_cost if rp.average_cost else rp.cost_per_unit
+        return self.quantity * _conversion_factor(self.unit, rp.unit) * unit_cost
+
     class Meta:
         unique_together = ('base_bread', 'raw_product')
         verbose_name = "Ingrediente de Base"
@@ -165,6 +218,12 @@ class FillingIngredient(models.Model):
     def unit(self):
         return self.raw_product.unit
 
+    @property
+    def cost(self):
+        rp = self.raw_product
+        unit_cost = rp.average_cost if rp.average_cost else rp.cost_per_unit
+        return self.quantity * _conversion_factor(self.unit, rp.unit) * unit_cost
+
     class Meta:
         unique_together = ('filling', 'raw_product')
         verbose_name = "Ingrediente de Relleno"
@@ -183,6 +242,12 @@ class ToppingIngredient(models.Model):
     @property
     def unit(self):
         return self.raw_product.unit
+
+    @property
+    def cost(self):
+        rp = self.raw_product
+        unit_cost = rp.average_cost if rp.average_cost else rp.cost_per_unit
+        return self.quantity * _conversion_factor(self.unit, rp.unit) * unit_cost
 
     class Meta:
         unique_together = ('topping', 'raw_product')
@@ -264,6 +329,7 @@ class Product(models.Model):
     color_scheme = models.CharField(max_length=200, blank=True, verbose_name="Esquema de colores")
     gender = models.CharField(max_length=20, blank=True, choices=[('nino', 'Niño'), ('nina', 'Niña'), ('hombre', 'Hombre'), ('mujer', 'Mujer'), ('unisex', 'Unisex')], verbose_name="Género")
     show_in_gallery = models.BooleanField(default=False, verbose_name="Mostrar en galería")
+    featured = models.BooleanField(default=False, verbose_name="Destacado en galería")
 
     def calculate_cost(self):
         """Return ingredient cost for ONE portion (1 person)."""
@@ -561,13 +627,22 @@ class Quote(models.Model):
     ]
 
     client        = models.ForeignKey(Client,  on_delete=models.CASCADE, related_name='quotes', verbose_name="Cliente")
-    product       = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='quotes', verbose_name="Producto")
+    product       = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='quotes', verbose_name="Producto (opcional)")
+    name          = models.CharField(max_length=200, blank=True, default='', verbose_name="Nombre del pastel")
+    base_bread    = models.ForeignKey(BaseBread, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Base de pastel")
+    filling       = models.ForeignKey(Filling,   on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Relleno")
+    topping       = models.ForeignKey(Topping,   on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Cubierta")
+    complexity_tier = models.ForeignKey(ComplexityTier, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Nivel de complejidad")
+    benefit_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=50, help_text="Porcentaje de beneficio aplicado sobre el costo", verbose_name="% Beneficio")
     persons       = models.PositiveIntegerField(default=1, verbose_name="Personas")
-    unit_price    = models.DecimalField(max_digits=16, decimal_places=6, default=0, help_text="Precio por persona", verbose_name="Precio por persona")
+    unit_price    = models.DecimalField(max_digits=16, decimal_places=6, default=0, help_text="Precio por persona (incluye beneficio y diseño)", verbose_name="Precio por persona")
+    ingredient_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Ingredientes")
     design_notes  = models.TextField(blank=True, verbose_name="Notas de diseño")
     design_surcharge = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Recargo por diseño")
     labor_cost    = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Mano de obra")
+    benefit_amount = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Beneficio")
     delivery_cost = models.DecimalField(max_digits=16, decimal_places=6, default=0, verbose_name="Costo de envío")
+    show_delivery_on_pdf = models.BooleanField(default=False, verbose_name="Incluir envío en el PDF")
     due_date      = models.DateField(verbose_name="Fecha de vencimiento")
     status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name="Estado")
     notes         = models.TextField(blank=True, verbose_name="Notas")
@@ -575,12 +650,23 @@ class Quote(models.Model):
     updated_at    = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
 
     @property
-    def ingredient_cost(self):
-        return self.product.calculate_cost() * Decimal(str(self.persons)) if self.product else Decimal('0')
+    def cake_name(self):
+        if self.name:
+            return self.name
+        if self.product:
+            return self.product.name
+        parts = [c.name for c in (self.base_bread, self.filling, self.topping) if c]
+        return ' · '.join(parts) or 'Pastel'
 
     @property
     def total_price(self):
-        return (self.unit_price or Decimal('0')) * (self.persons or 1) + (self.design_surcharge or Decimal('0'))
+        """Subtotal = precio por persona × personas (incluye beneficio y diseño)."""
+        return (self.unit_price or Decimal('0')) * (self.persons or 1)
+
+    @property
+    def total_cost(self):
+        """Costo real (sin beneficio) = ingredientes + mano de obra + diseño."""
+        return (self.ingredient_cost or Decimal('0')) + (self.labor_cost or Decimal('0')) + (self.design_surcharge or Decimal('0'))
 
     @property
     def grand_total(self):
@@ -592,14 +678,48 @@ class Quote(models.Model):
         return (self.due_date - timezone.now().date()).days
 
     def recalculate(self):
-        if self.product:
-            b = self.product.calculate_price_for(self.persons or 1)
-            self.unit_price = b['price_per_person']
+        has_components = self.base_bread_id or self.filling_id or self.topping_id
+        if has_components:
+            b = calculate_components_cost(
+                self.base_bread, self.filling, self.topping,
+                self.complexity_tier, self.persons or 1, self.benefit_percentage,
+            )
+            self.ingredient_cost = b['ingredient_cost']
             self.labor_cost = b['labor_cost']
             self.design_surcharge = b['design_surcharge']
+            self.benefit_amount = b['benefit_amount']
+            self.unit_price = b['unit_price']
+        elif self.product:
+            b = self.product.calculate_price_for(self.persons or 1)
+            benefit = (self.benefit_percentage or Decimal('0')) / Decimal('100')
+            self.ingredient_cost = b['ingredient_cost']
+            self.labor_cost = b['labor_cost']
+            self.design_surcharge = b['design_surcharge']
+            self.benefit_amount = (b['base_total'] + b['design_surcharge']) * benefit
+            self.unit_price = b['price_per_person'] * (Decimal('1') + benefit)
+
+    def ensure_product(self):
+        """Crea/recupera el Producto únicamente al momento de la venta."""
+        if self.product_id:
+            return self.product
+        product, _ = Product.objects.get_or_create(
+            name=self.cake_name,
+            category='cake',
+            base_bread=self.base_bread,
+            filling=self.filling,
+            topping=self.topping,
+            defaults={
+                'complexity_tier': self.complexity_tier,
+                'is_available': True,
+                'price': Decimal('0'),
+            },
+        )
+        self.product = product
+        self.save(update_fields=['product'])
+        return product
 
     def __str__(self):
-        return f"Cotización #{self.id} – {self.client.name} ({self.product.name} × {self.persons} pers.)"
+        return f"Cotización #{self.id} – {self.client.name} ({self.cake_name} × {self.persons} pers.)"
 
     class Meta:
         ordering = ['-created_at']

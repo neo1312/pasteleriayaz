@@ -20,7 +20,7 @@ class IngredientInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'brand', 'cost', 'price', 'margin_percentage', 'is_available')
-    list_filter = ('category', 'brand', 'complexity_tier', 'is_available', 'created_at')
+    list_filter = ('category', 'brand', 'complexity_tier', 'is_available', 'featured', 'created_at')
     search_fields = ('name', 'description')
     readonly_fields = ('cost',)
     inlines = [IngredientInline]
@@ -40,7 +40,7 @@ class ProductAdmin(admin.ModelAdmin):
         ('Raciones', {
             'fields': ('complexity_tier', 'base_labor_per_portion', 'min_persons', 'max_persons'),
         }),
-        ('Estado', {'fields': ('is_available',)}),
+        ('Estado', {'fields': ('is_available', 'show_in_gallery', 'featured')}),
     )
 
     class Media:
@@ -48,6 +48,11 @@ class ProductAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         from decimal import Decimal
+
+        uploaded = request.FILES.get('image')
+        if uploaded:
+            from .image_utils import save_optimized_product_image
+            obj.image = save_optimized_product_image(uploaded)
 
         # For existing products recalculate cost now; for new ones the product
         # has no pk yet so we can't query ingredients — save_related handles it.
@@ -205,19 +210,25 @@ class QuoteAdmin(admin.ModelAdmin):
     change_form_template = 'admin/inventory/quote/change_form.html'
 
     list_display = (
-        'id', 'client', 'product', 'persons', 'unit_price',
+        'id', 'client', 'cake_name', 'persons', 'unit_price',
         'show_total_price', 'show_delivery_cost', 'show_grand_total',
         'due_date', 'show_days_until_due', 'status',
     )
     list_filter  = ('status', 'due_date', 'client')
-    search_fields = ('client__name', 'product__name', 'notes')
-    readonly_fields = ('unit_price', 'design_surcharge', 'labor_cost', 'show_total_price', 'show_grand_total', 'show_days_until_due')
+    search_fields = ('client__name', 'name', 'notes')
+    readonly_fields = ('unit_price', 'ingredient_cost', 'labor_cost', 'benefit_amount', 'design_surcharge', 'show_total_price', 'show_grand_total', 'show_days_until_due')
     fieldsets = (
         ('Detalles de Cotización', {
-            'fields': ('client', 'product', 'persons', 'design_notes'),
+            'fields': ('client', 'name', 'base_bread', 'filling', 'topping', 'complexity_tier', 'persons', 'design_notes'),
         }),
-        ('Costos', {
-            'fields': ('unit_price', 'design_surcharge', 'labor_cost', 'delivery_cost'),
+        ('Precio', {
+            'fields': ('benefit_percentage', 'unit_price'),
+        }),
+        ('Costos (auto)', {
+            'fields': ('ingredient_cost', 'labor_cost', 'design_surcharge', 'benefit_amount', 'delivery_cost', 'show_delivery_on_pdf'),
+        }),
+        ('Producto (se crea al vender)', {
+            'fields': ('product',),
         }),
         ('Totales (auto)', {
             'fields': ('show_total_price', 'show_grand_total'),
@@ -269,7 +280,10 @@ class QuoteAdmin(admin.ModelAdmin):
     def convert_to_order_view(self, request, pk):
         quote = Quote.objects.select_related('client', 'product').get(pk=pk)
 
-        shortages = quote.product.check_stock_for(quote.persons)
+        product = quote.ensure_product()
+        quote.refresh_from_db()
+
+        shortages = product.check_stock_for(quote.persons)
         if shortages:
             lines = [
                 f"• {s['name']}: necesita {s['needed']:.2f} {s['unit']}, "
@@ -293,7 +307,7 @@ class QuoteAdmin(admin.ModelAdmin):
         # Create the order
         order = Order.objects.create(
             client=quote.client,
-            product=quote.product,
+            product=product,
             persons=quote.persons,
             unit_price=quote.unit_price,
             design_notes=quote.design_notes,
@@ -303,6 +317,12 @@ class QuoteAdmin(admin.ModelAdmin):
             delivery_cost=quote.delivery_cost,
             status='pending',
             notes=f"Convertido de Cotización #{quote.pk}. {quote.notes or ''}".strip(),
+        )
+        Order.objects.filter(pk=order.pk).update(
+            unit_price=quote.unit_price,
+            design_surcharge=quote.design_surcharge,
+            labor_cost=quote.labor_cost,
+            total_price=quote.total_price,
         )
         quote.status = 'approved'
         quote.save(update_fields=['status'])

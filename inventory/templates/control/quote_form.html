@@ -19,15 +19,38 @@
             <h3 style="margin-bottom:20px;">📋 Parámetros</h3>
 
             <div class="form-group" style="margin-bottom:16px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Producto</label>
-                <select name="product" required onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
-                    <option value="">— Seleccionar producto —</option>
-                    {% for p in products %}
-                    <option value="{{ p.id }}" data-min="{{ p.min_persons|default:1 }}" data-max="{{ p.max_persons|default:1000 }}" {% if quote and quote.product.id == p.id %}selected{% endif %}>
-                        {{ p.name }}
-                    </option>
-                    {% endfor %}
-                </select>
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre del pastel</label>
+                <input type="text" name="name" value="{{ quote.name|default:'' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            </div>
+
+            <div class="grid-3">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Base</label>
+                    <select name="base_bread" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Seleccionar —</option>
+                        {% for b in breads %}
+                        <option value="{{ b.id }}" {% if quote.base_bread_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Relleno</label>
+                    <select name="filling" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Sin relleno —</option>
+                        {% for f in fillings %}
+                        <option value="{{ f.id }}" {% if quote.filling_id == f.id %}selected{% endif %}>{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Cubierta</label>
+                    <select name="topping" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
+                        <option value="">— Sin cubierta —</option>
+                        {% for t in toppings %}
+                        <option value="{{ t.id }}" {% if quote.topping_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <div class="form-group" style="margin-bottom:16px;">
@@ -35,23 +58,28 @@
                 <select name="client" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
                     <option value="">— Seleccionar cliente —</option>
                     {% for c in clients %}
-                    <option value="{{ c.id }}" {% if quote and quote.client.id == c.id %}selected{% endif %}>{{ c.name }} — {{ c.email }}</option>
+                    <option value="{{ c.id }}" {% if quote.client_id == c.id %}selected{% endif %}>{{ c.name }} — {{ c.email }}</option>
                     {% endfor %}
                 </select>
             </div>
 
-            <div class="form-group" style="margin-bottom:16px;">
-                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas</label>
-                <input type="number" name="persons" value="{{ quote.persons|default:1 }}" min="1" max="1000" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
-                <small id="persons_hint" style="color:#999;font-size:0.85em;"></small>
+            <div class="grid-2">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Personas</label>
+                    <input type="number" name="persons" value="{{ quote.persons|default:1 }}" min="1" max="1000" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">% Beneficio</label>
+                    <input type="number" name="benefit" value="{{ quote.benefit_percentage|default:50 }}" step="0.01" min="0" oninput="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+                </div>
             </div>
 
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nivel de Complejidad</label>
                 <select name="complexity_tier" onchange="updatePrice()" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;background:white;">
-                    <option value="">— Predeterminado del producto —</option>
+                    <option value="">— Sin complejidad —</option>
                     {% for t in tiers %}
-                    <option value="{{ t.id }}" {% if quote and quote.product.complexity_tier_id == t.id %}selected{% endif %}>{{ t.name }} (+{{ t.surcharge_percentage }}%)</option>
+                    <option value="{{ t.id }}" {% if quote.complexity_tier_id == t.id %}selected{% endif %}>{{ t.name }} (+{{ t.surcharge_percentage }}%)</option>
                     {% endfor %}
                 </select>
             </div>
@@ -71,6 +99,11 @@
                     <input type="date" name="due_date" value="{{ quote.due_date|date:'Y-m-d'|default:'' }}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
                 </div>
             </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                    <input type="checkbox" name="show_delivery_on_pdf" {% if quote.show_delivery_on_pdf %}checked{% endif %}> Incluir costo de envío en el PDF
+                </label>
+            </div>
         </div>
 
         <div>
@@ -78,7 +111,7 @@
                 <h3 style="margin-bottom:20px;">💰 Desglose de Precio</h3>
                 <div class="price-display" id="priceDisplay">
                     <div class="empty-state">
-                        <h3>Selecciona un producto</h3>
+                        <h3>Selecciona una base</h3>
                         <p>Los precios se actualizarán automáticamente.</p>
                     </div>
                 </div>
@@ -93,26 +126,30 @@
 
 <script>
     function updatePrice() {
-        const productId = document.querySelector('[name="product"]').value;
+        const base = document.querySelector('[name="base_bread"]').value;
+        const filling = document.querySelector('[name="filling"]').value;
+        const topping = document.querySelector('[name="topping"]').value;
+        const tier = document.querySelector('[name="complexity_tier"]').value;
         const persons = parseInt(document.querySelector('[name="persons"]').value) || 1;
-        const tierId = document.querySelector('[name="complexity_tier"]').value;
+        const benefit = parseFloat(document.querySelector('[name="benefit"]').value) || 0;
         const deliveryCost = parseFloat(document.querySelector('[name="delivery_cost"]').value) || 0;
         const display = document.getElementById('priceDisplay');
 
-        if (!productId) {
-            display.innerHTML = `<div class="empty-state"><h3>Selecciona un producto</h3><p>Los precios se actualizarán automáticamente.</p></div>`;
+        if (!base) {
+            display.innerHTML = `<div class="empty-state"><h3>Selecciona una base</h3><p>Los precios se actualizarán automáticamente.</p></div>`;
             return;
         }
 
-        const sel = document.querySelector('[name="product"]');
-        const opt = sel.options[sel.selectedIndex];
-        const min = parseInt(opt.dataset.min) || 1;
-        const max = parseInt(opt.dataset.max) || 1000;
-        document.getElementById('persons_hint').textContent = `Mín: ${min} · Máx: ${max}`;
+        const params = new URLSearchParams({
+            persons: persons,
+            benefit: benefit,
+            complexity_tier: tier || '',
+            base_bread: base || '',
+            filling: filling || '',
+            topping: topping || '',
+        });
 
-        const url = `/api/calcular-precio/?product=${productId}&persons=${persons}${tierId ? '&complexity_tier=' + tierId : ''}`;
-
-        fetch(url)
+        fetch('/api/calcular-precio-rapido/?' + params.toString())
             .then(r => r.json())
             .then(data => {
                 if (data.error) { display.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${data.error}</p></div>`; return; }
@@ -122,7 +159,8 @@
                     <div class="price-row"><span>🧾 Ingredientes</span><span class="value">$${parseFloat(data.ingredient_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>👨‍🍳 Mano de obra</span><span class="value">$${parseFloat(data.labor_cost).toFixed(2)}</span></div>
                     <div class="price-row"><span>🎨 Recargo por diseño</span><span class="value">+$${parseFloat(data.design_surcharge).toFixed(2)}</span></div>
-                    <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.price_per_person).toFixed(2)}</span></div>
+                    <div class="price-row"><span>💵 Beneficio (${data.benefit_percentage}%)</span><span class="value">+$${parseFloat(data.benefit_amount).toFixed(2)}</span></div>
+                    <div class="price-row"><span>💰 Precio por persona</span><span class="value">$${parseFloat(data.unit_price).toFixed(2)}</span></div>
                     <div class="price-row total"><span>📦 Subtotal (${persons} pers.)</span><span class="value">$${total.toFixed(2)}</span></div>
                     ${deliveryCost > 0 ? `<div class="price-row"><span>🚚 Envío</span><span class="value">+$${deliveryCost.toFixed(2)}</span></div>
                     <div class="price-row total"><span>🏆 Gran Total</span><span class="value">$${grandTotal.toFixed(2)}</span></div>` : ''}
