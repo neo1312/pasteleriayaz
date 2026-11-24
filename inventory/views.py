@@ -337,8 +337,8 @@ def client_create(request):
             data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
             name = data.get('name', '').strip()
             email = data.get('email', '').strip()
-            if not name or not email:
-                return JsonResponse({'error': 'Nombre y email obligatorios'}, status=400) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else None
+            if not name:
+                return JsonResponse({'error': 'El nombre es obligatorio'}, status=400) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else None
             client = Client.objects.create(name=name, email=email, phone=data.get('phone', '').strip())
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'id': client.id, 'name': client.name, 'email': client.email})

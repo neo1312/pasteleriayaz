@@ -419,13 +419,13 @@ class Client(models.Model):
         null=True, blank=True,
     )
     name = models.CharField(max_length=200, verbose_name="Nombre")
-    email = models.EmailField(verbose_name="Email")
-    phone = models.CharField(max_length=20, verbose_name="Teléfono")
+    email = models.EmailField(blank=True, verbose_name="Email")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
 
     def __str__(self):
-        return f"{self.name} ({self.email})"
+        return f"{self.name} ({self.email})" if self.email else self.name
 
     class Meta:
         ordering = ['name']
