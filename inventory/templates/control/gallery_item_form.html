@@ -1,0 +1,58 @@
+{% extends 'control/base.html' %}
+{% block title %}{% if object.pk %}Editar{% else %}Nueva{% endif %} imagen de galería - Pastelería Yaz{% endblock %}
+{% block page_title %}{% if object.pk %}✏️ Editar{% else %}➕ Nueva{% endif %} imagen de galería{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Nombre</label>
+            <input type="text" name="name" value="{% if object %}{{ object.name }}{% elif form %}{{ form.name }}{% endif %}" required style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Descripción</label>
+            <textarea name="description" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;resize:vertical;min-height:80px;">{% if object %}{{ object.description }}{% elif form %}{{ form.description }}{% endif %}</textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Etiquetas</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px 16px;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;background:white;">
+                {% for tag in tags %}
+                <label style="font-size:0.9em;color:#555;font-weight:500;">
+                    <input type="checkbox" name="tags" value="{{ tag.id }}" {% if tag.id in selected_tag_ids %}checked{% endif %}> {{ tag.name }}
+                </label>
+                {% empty %}
+                <span style="font-size:0.9em;color:#999;">Todavía no hay etiquetas.</span>
+                {% endfor %}
+            </div>
+            <input type="text" name="new_tags" value="{% if form %}{{ form.new_tags }}{% endif %}" placeholder="Nuevas etiquetas separadas por coma: bodas, flores..." style="width:100%;margin-top:8px;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            <small style="display:block;margin-top:6px;color:#999;">Puedes escribir etiquetas nuevas aquí; se crean automáticamente.</small>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Imagen</label>
+            {% if object.image %}
+            <img src="{{ object.image.url }}" alt="{{ object.name }}" style="display:block;max-width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-bottom:10px;">
+            {% endif %}
+            <input type="file" name="image" accept="image/*" {% if not object %}required{% endif %} style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;background:white;">
+            <small style="display:block;margin-top:6px;color:#999;">Se recorta automáticamente a formato 3:4 (1200×1600 px) y se convierte a WebP.</small>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">Orden</label>
+            <input type="number" name="sort_order" min="0" value="{% if object %}{{ object.sort_order }}{% elif form %}{{ form.sort_order|default:0 }}{% else %}0{% endif %}" style="width:100%;padding:10px 14px;border:2px solid #e8d4c0;border-radius:8px;font-size:0.95em;outline:none;">
+            <small style="display:block;margin-top:6px;color:#999;">Números menores aparecen primero.</small>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                <input type="checkbox" name="is_active" {% if object %}{% if object.is_active %}checked{% endif %}{% else %}checked{% endif %}> Visible en la galería pública
+            </label>
+            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
+                <input type="checkbox" name="featured" {% if object.featured %}checked{% endif %}> ⭐ Destacado
+            </label>
+        </div>
+        <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
+            <button type="submit" class="btn btn-success">💾 Guardar</button>
+            <a href="{% url 'gallery_item_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

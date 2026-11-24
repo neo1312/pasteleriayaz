@@ -411,6 +411,26 @@ class Product(models.Model):
         verbose_name_plural = "Productos"
 
 
+class ProductGalleryItem(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nombre")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    image = models.ImageField(upload_to='gallery/', verbose_name="Imagen")
+    is_active = models.BooleanField(default=True, verbose_name="Visible en galería")
+    featured = models.BooleanField(default=False, verbose_name="Destacado")
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="Orden")
+    tags = models.ManyToManyField(EventTag, blank=True, verbose_name="Etiquetas")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['sort_order', '-created_at']
+        verbose_name = "Elemento de galería"
+        verbose_name_plural = "Galería"
+
+
 class Client(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

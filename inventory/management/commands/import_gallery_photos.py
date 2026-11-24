@@ -4,17 +4,17 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from inventory.image_utils import optimize_image
-from inventory.models import Product
+from inventory.image_utils import optimize_image, GALLERY_WIDTH, GALLERY_HEIGHT
+from inventory.models import ProductGalleryItem
 
 
 class Command(BaseCommand):
-    help = 'Optimiza imágenes (WebP ~800px) de un directorio y crea productos de galería.'
+    help = 'Recorta (3:4) y optimiza imágenes a WebP de un directorio y crea elementos de galería.'
 
     def add_arguments(self, parser):
         parser.add_argument('src_dir', type=str, help='Directorio con las imágenes fuente')
-        parser.add_argument('--prefix', default='Pastel de catálogo', help='Prefijo del nombre de cada producto')
-        parser.add_argument('--category', default='cake', help='Categoría del producto')
+        parser.add_argument('--prefix', default='Pastel de catálogo', help='Prefijo del nombre de cada elemento')
+        parser.add_argument('--description', default='Pastel artesanal', help='Descripción de cada elemento')
 
     def handle(self, *args, **opts):
         src_dir = Path(opts['src_dir'])
@@ -29,28 +29,30 @@ class Command(BaseCommand):
         if not images:
             raise CommandError('No se encontraron imágenes en el directorio.')
 
-        products_dir = Path(settings.MEDIA_ROOT) / 'products'
-        products_dir.mkdir(parents=True, exist_ok=True)
+        gallery_dir = Path(settings.MEDIA_ROOT) / 'gallery'
+        gallery_dir.mkdir(parents=True, exist_ok=True)
 
         created = 0
         for index, src in enumerate(images, start=1):
-            data, filename = optimize_image(str(src))
-            dest = products_dir / filename
+            data, filename = optimize_image(
+                str(src),
+                target_size=(GALLERY_WIDTH, GALLERY_HEIGHT),
+            )
+            dest = gallery_dir / filename
 
-            rel_path = f'products/{filename}'
-            if Product.objects.filter(image=rel_path).exists():
+            rel_path = f'gallery/{filename}'
+            if ProductGalleryItem.objects.filter(image=rel_path).exists():
                 self.stdout.write(f'  Omitido (ya importado): {filename}')
                 continue
 
             dest.write_bytes(data)
             name = f"{opts['prefix']} {index}"
-            Product.objects.create(
+            ProductGalleryItem.objects.create(
                 name=name,
-                category=opts['category'],
-                short_description='Pastel artesanal',
-                is_available=True,
-                show_in_gallery=True,
+                description=opts['description'],
                 image=rel_path,
+                is_active=True,
+                sort_order=index,
             )
             size_kb = round(len(data) / 1024, 1)
             self.stdout.write(self.style.SUCCESS(
@@ -59,5 +61,5 @@ class Command(BaseCommand):
             created += 1
 
         self.stdout.write(self.style.SUCCESS(
-            f'Listo. {created} producto(s) creado(s) en {products_dir}.'
+            f'Listo. {created} elemento(s) creado(s) en {gallery_dir}.'
         ))

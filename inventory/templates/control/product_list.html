@@ -32,7 +32,6 @@
                 <th>Precio</th>
                 <th>Margen</th>
                 <th>Género</th>
-                <th>Galería</th>
                 <th>Disponible</th>
                 <th>Acciones</th>
             </tr>
@@ -56,7 +55,6 @@
                 <td class="amount">${{ p.price|floatformat:2 }}</td>
                 <td class="amount">{{ p.margin_percentage|floatformat:1 }}%</td>
                 <td>{{ p.get_gender_display|default:'—' }}</td>
-                <td>{% if p.show_in_gallery %}✅{% else %}❌{% endif %}</td>
                 <td>{% if p.is_available %}✅{% else %}❌{% endif %}</td>
                 <td class="actions">
                     <a href="{% url 'product_edit' p.id %}" class="btn btn-sm btn-primary">Editar</a>

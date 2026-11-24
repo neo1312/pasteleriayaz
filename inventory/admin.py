@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django import forms
 from django.shortcuts import render
 from django.utils.formats import number_format
-from .models import Product, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, QuoteAgregado, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient, Brand, EventTag
+from .models import Product, ProductGalleryItem, Client, Order, Provider, RawProduct, Purchase, PurchaseItem, RecipeIngredient, Quote, QuoteAgregado, ProviderCatalog, ComplexityTier, TransportZone, BaseBread, Filling, Topping, BaseBreadIngredient, FillingIngredient, ToppingIngredient, Brand, EventTag
 
 
 class IngredientInline(admin.TabularInline):
@@ -20,7 +20,7 @@ class IngredientInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'brand', 'cost', 'price', 'margin_percentage', 'is_available')
-    list_filter = ('category', 'brand', 'complexity_tier', 'is_available', 'featured', 'created_at')
+    list_filter = ('category', 'brand', 'complexity_tier', 'is_available', 'created_at')
     search_fields = ('name', 'description')
     readonly_fields = ('cost',)
     inlines = [IngredientInline]
@@ -40,7 +40,7 @@ class ProductAdmin(admin.ModelAdmin):
         ('Raciones', {
             'fields': ('complexity_tier', 'base_labor_per_portion', 'min_persons', 'max_persons'),
         }),
-        ('Estado', {'fields': ('is_available', 'show_in_gallery', 'featured')}),
+        ('Estado', {'fields': ('is_available',)}),
     )
 
     class Media:
@@ -401,6 +401,35 @@ class ProviderCatalogAdmin(admin.ModelAdmin):
 class ComplexityTierAdmin(admin.ModelAdmin):
     list_display = ("name", "surcharge_percentage")
     search_fields = ("name",)
+
+
+@admin.register(ProductGalleryItem)
+class ProductGalleryItemAdmin(admin.ModelAdmin):
+    list_display = ('image_preview', 'name', 'is_active', 'featured', 'sort_order', 'created_at')
+    list_editable = ('is_active', 'featured', 'sort_order')
+    list_filter = ('is_active', 'featured', 'tags')
+    search_fields = ('name', 'description', 'tags__name')
+    readonly_fields = ('image_preview',)
+    filter_horizontal = ('tags',)
+    fieldsets = (
+        ('Información', {'fields': ('name', 'description', 'tags')}),
+        ('Imagen', {'fields': ('image', 'image_preview')}),
+        ('Publicación', {'fields': ('is_active', 'featured', 'sort_order')}),
+    )
+
+    def image_preview(self, obj):
+        if not obj.image:
+            return '—'
+        return format_html('<img src="{}" style="max-height:90px;border-radius:6px;" />', obj.image.url)
+
+    image_preview.short_description = 'Vista previa'
+
+    def save_model(self, request, obj, form, change):
+        uploaded = request.FILES.get('image')
+        if uploaded:
+            from .image_utils import save_optimized_gallery_image
+            obj.image = save_optimized_gallery_image(uploaded)
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Brand)

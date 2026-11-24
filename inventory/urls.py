@@ -15,6 +15,12 @@ urlpatterns = [
     path('productos/<int:pk>/editar/', views.product_edit, name='product_edit'),
     path('productos/<int:pk>/eliminar/', views.product_delete, name='product_delete'),
 
+    # Galería
+    path('galeria/', views.gallery_item_list, name='gallery_item_list'),
+    path('galeria/nueva/', views.gallery_item_create, name='gallery_item_create'),
+    path('galeria/<int:pk>/editar/', views.gallery_item_edit, name='gallery_item_edit'),
+    path('galeria/<int:pk>/eliminar/', views.gallery_item_delete, name='gallery_item_delete'),
+
     # Clientes
     path('clientes/', views.client_list, name='client_list'),
     path('clientes/nuevo/', views.client_create, name='client_create'),

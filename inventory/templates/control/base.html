@@ -255,6 +255,9 @@
             <a href="{% url 'product_list' %}" class="{% if request.resolver_match.url_name == 'product_list' %}active{% endif %}">
                 🧁 <span>Productos</span>
             </a>
+            <a href="{% url 'gallery_item_list' %}" class="{% if request.resolver_match.url_name == 'gallery_item_list' or request.resolver_match.url_name == 'gallery_item_create' or request.resolver_match.url_name == 'gallery_item_edit' %}active{% endif %}">
+                🖼️ <span>Galería</span>
+            </a>
             <a href="{% url 'client_list' %}" class="{% if request.resolver_match.url_name == 'client_list' %}active{% endif %}">
                 👥 <span>Clientes</span>
             </a>

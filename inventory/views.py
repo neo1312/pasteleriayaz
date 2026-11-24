@@ -12,8 +12,8 @@ from datetime import datetime, timedelta
 import json
 import io
 from weasyprint import HTML
-from .models import Product, Order, Purchase, RawProduct, Client, Quote, QuoteAgregado, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag, calculate_components_cost
-from .image_utils import save_optimized_product_image
+from .models import Product, ProductGalleryItem, Order, Purchase, RawProduct, Client, Quote, QuoteAgregado, ProviderCatalog, ComplexityTier, Provider, BaseBread, Filling, Topping, Brand, BaseBreadIngredient, FillingIngredient, ToppingIngredient, EventTag, calculate_components_cost
+from .image_utils import save_optimized_product_image, save_optimized_gallery_image
 
 
 def parse_decimal(value, default=Decimal('0')):
@@ -29,6 +29,13 @@ def parse_decimal(value, default=Decimal('0')):
         return default
 
 
+def parse_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _save_quote_agregados(quote, post):
     """Create the inline free-text agregado rows from a POST body."""
     for desc, amt in zip(post.getlist('agregado_desc'), post.getlist('agregado_amount')):
@@ -39,26 +46,23 @@ def _save_quote_agregados(quote, post):
 
 
 def product_gallery(request):
-    products = Product.objects.filter(is_available=True, show_in_gallery=True)
-    featured_products = products.filter(featured=True)
-    category = request.GET.get('category')
-    tag_id = request.GET.get('tag')
-    gender = request.GET.get('gender')
-    if category:
-        products = products.filter(category=category)
+    items = ProductGalleryItem.objects.filter(is_active=True).prefetch_related('tags')
+    tag_id = parse_int(request.GET.get('tag'), 0)
     if tag_id:
-        products = products.filter(event_tags__id=tag_id)
-    if gender:
-        products = products.filter(gender=gender)
-    products = products.order_by('name')
-    categories = Product.CATEGORY_CHOICES
-    event_tags = EventTag.objects.order_by('name')
+        items = items.filter(tags__id=tag_id)
+    featured_items = items.filter(featured=True)
+    items = items.order_by('sort_order', '-created_at').distinct()
+    event_tags = (
+        EventTag.objects
+        .filter(productgalleryitem__in=ProductGalleryItem.objects.filter(is_active=True))
+        .distinct()
+        .order_by('name')
+    )
     return render(request, 'inventory/gallery.html', {
-        'products': products, 'categories': categories,
-        'featured_products': featured_products,
-        'selected_category': category, 'event_tags': event_tags,
-        'selected_tag': int(tag_id) if tag_id else None,
-        'selected_gender': gender,
+        'items': items,
+        'featured_items': featured_items,
+        'event_tags': event_tags,
+        'selected_tag': tag_id or None,
     })
 
 
@@ -228,8 +232,6 @@ def product_create(request):
             short_description=request.POST.get('short_description', ''),
             price=parse_decimal(request.POST.get('price', '0')),
             is_available=request.POST.get('is_available') == 'on',
-            show_in_gallery=request.POST.get('show_in_gallery') == 'on',
-            featured=request.POST.get('featured') == 'on',
             design_description=request.POST.get('design_description', ''),
             color_scheme=request.POST.get('color_scheme', ''),
             gender=request.POST.get('gender', ''),
@@ -286,8 +288,6 @@ def product_edit(request, pk):
         product.min_persons = int(request.POST.get('min_persons', '1'))
         product.max_persons = int(request.POST.get('max_persons', '100'))
         product.is_available = request.POST.get('is_available') == 'on'
-        product.show_in_gallery = request.POST.get('show_in_gallery') == 'on'
-        product.featured = request.POST.get('featured') == 'on'
         product.design_description = request.POST.get('design_description', product.design_description or '')
         product.color_scheme = request.POST.get('color_scheme', product.color_scheme or '')
         product.gender = request.POST.get('gender', product.gender or '')
@@ -319,7 +319,93 @@ def product_delete(request, pk):
     return render(request, 'control/confirm_delete.html', {'object': product, 'cancel_url': 'product_list'})
 
 
-# ── Clients CRUD ─────────────────────────────────────────────────────────────
+# ── Gallery CRUD ─────────────────────────────────────────────────────────────
+
+def _resolve_gallery_tags(post):
+    tag_ids = [parse_int(t) for t in post.getlist('tags') if parse_int(t)]
+    names = [n.strip() for n in post.get('new_tags', '').split(',') if n.strip()]
+    for name in names:
+        tag, _ = EventTag.objects.get_or_create(name=name)
+        tag_ids.append(tag.id)
+    return list(dict.fromkeys(tag_ids))
+
+
+@login_required
+def gallery_item_list(request):
+    items = ProductGalleryItem.objects.prefetch_related('tags').order_by('sort_order', '-created_at')
+    search = request.GET.get('search', '').strip()
+    if search:
+        items = items.filter(
+            Q(name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(tags__name__icontains=search)
+        ).distinct()
+    return render(request, 'control/gallery_item_list.html', {'items': items, 'search': search})
+
+
+@login_required
+def gallery_item_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        tag_ids = _resolve_gallery_tags(request.POST)
+        image = save_optimized_gallery_image(request.FILES.get('image'))
+        if not name or not image:
+            messages.error(request, 'El nombre y la imagen son obligatorios.')
+            return render(request, 'control/gallery_item_form.html', {
+                'form': request.POST,
+                'tags': EventTag.objects.order_by('name'),
+                'selected_tag_ids': tag_ids,
+            })
+        item = ProductGalleryItem(
+            name=name,
+            description=request.POST.get('description', '').strip(),
+            is_active=request.POST.get('is_active') == 'on',
+            featured=request.POST.get('featured') == 'on',
+            sort_order=parse_int(request.POST.get('sort_order'), 0),
+        )
+        item.image = image
+        item.save()
+        item.tags.set(tag_ids)
+        messages.success(request, f'"{item.name}" agregado a la galería.')
+        return redirect('gallery_item_list')
+    return render(request, 'control/gallery_item_form.html', {
+        'tags': EventTag.objects.order_by('name'),
+        'selected_tag_ids': [],
+    })
+
+
+@login_required
+def gallery_item_edit(request, pk):
+    item = get_object_or_404(ProductGalleryItem, pk=pk)
+    if request.method == 'POST':
+        item.name = request.POST.get('name', item.name).strip() or item.name
+        item.description = request.POST.get('description', item.description or '').strip()
+        item.is_active = request.POST.get('is_active') == 'on'
+        item.featured = request.POST.get('featured') == 'on'
+        item.sort_order = parse_int(request.POST.get('sort_order'), item.sort_order)
+        image = save_optimized_gallery_image(request.FILES.get('image'))
+        if image:
+            item.image = image
+        item.save()
+        item.tags.set(_resolve_gallery_tags(request.POST))
+        messages.success(request, f'"{item.name}" actualizado.')
+        return redirect('gallery_item_list')
+    return render(request, 'control/gallery_item_form.html', {
+        'object': item,
+        'tags': EventTag.objects.order_by('name'),
+        'selected_tag_ids': list(item.tags.values_list('id', flat=True)),
+    })
+
+
+@login_required
+def gallery_item_delete(request, pk):
+    item = get_object_or_404(ProductGalleryItem, pk=pk)
+    if request.method == 'POST':
+        item.delete()
+        messages.success(request, 'Elemento de galería eliminado.')
+        return redirect('gallery_item_list')
+    return render(request, 'control/confirm_delete.html', {'object': item, 'cancel_url': 'gallery_item_list'})
+
 
 @login_required
 def client_list(request):
@@ -1083,10 +1169,22 @@ def order_pay(request, pk):
 def order_publish_gallery(request, pk):
     order = get_object_or_404(Order.objects.select_related('product'), pk=pk)
     product = order.product
-    product.show_in_gallery = True
-    product.save(update_fields=['show_in_gallery'])
-    messages.success(request, f'✅ "{product.name}" publicado en la galería. Completa la información y foto.')
-    return redirect('product_edit', pk=product.pk)
+    if not product.image:
+        messages.error(request, f'"{product.name}" no tiene imagen. Súbela antes de publicarlo en la galería.')
+        return redirect('product_edit', pk=product.pk)
+    item = ProductGalleryItem.objects.filter(name=product.name, image=product.image.name).first()
+    if item is None:
+        item = ProductGalleryItem.objects.create(
+            name=product.name,
+            description=product.short_description or product.description or '',
+            image=product.image.name,
+            is_active=True,
+            featured=product.featured,
+        )
+        messages.success(request, f'✅ "{product.name}" publicado en la galería. Puedes editar los detalles ahí.')
+    else:
+        messages.info(request, f'"{product.name}" ya estaba en la galería.')
+    return redirect('gallery_item_edit', pk=item.pk)
 
 
 @login_required

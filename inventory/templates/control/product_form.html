@@ -146,12 +146,6 @@
             <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
                 <input type="checkbox" name="is_available" {% if form.is_available.value %}checked{% endif %}> Disponible en tienda
             </label>
-            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
-                <input type="checkbox" name="show_in_gallery" {% if form.show_in_gallery.value %}checked{% endif %}> Mostrar en galería pública
-            </label>
-            <label style="display:block;font-weight:600;margin-bottom:5px;font-size:0.9em;color:#555;">
-                <input type="checkbox" name="featured" {% if form.featured.value %}checked{% endif %}> ⭐ Destacado en galería
-            </label>
         </div>
         <div class="form-actions" style="display:flex;gap:10px;margin-top:20px;">
             <button type="submit" class="btn btn-success">💾 Guardar</button>
