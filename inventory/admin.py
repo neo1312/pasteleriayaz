@@ -466,13 +466,12 @@ class BaseBreadIngredientInline(admin.TabularInline):
 
 @admin.register(BaseBread)
 class BaseBreadAdmin(admin.ModelAdmin):
-    list_display = ('name', 'base_labor_per_portion', 'is_available')
+    list_display = ('name', 'is_available')
     list_filter = ('is_available',)
     search_fields = ('name', 'description')
     inlines = [BaseBreadIngredientInline]
     fieldsets = (
         ('Información Básica', {'fields': ('name', 'description')}),
-        ('Costos', {'fields': ('base_labor_per_portion',)}),
         ('Estado', {'fields': ('is_available',)}),
     )
 
@@ -514,13 +513,12 @@ class ToppingIngredientInline(admin.TabularInline):
 
 @admin.register(Topping)
 class ToppingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'base_labor_per_portion', 'is_available')
+    list_display = ('name', 'is_available')
     list_filter = ('is_available',)
     search_fields = ('name', 'description')
     inlines = [ToppingIngredientInline]
     fieldsets = (
         ('Información Básica', {'fields': ('name', 'description')}),
-        ('Costos', {'fields': ('base_labor_per_portion',)}),
         ('Estado', {'fields': ('is_available',)}),
     )
 

@@ -40,13 +40,11 @@ def calculate_components_cost(base_bread, filling, topping, complexity_tier, per
     labor_per = Decimal('0')
     if base_bread:
         ing_per += base_bread.cost_per_portion()
-        labor_per += base_bread.base_labor_per_portion or Decimal('0')
     if filling:
         ing_per += filling.cost_per_portion()
         labor_per += filling.base_labor_per_portion or Decimal('0')
     if topping:
         ing_per += topping.cost_per_portion()
-        labor_per += topping.base_labor_per_portion or Decimal('0')
 
     base_per = ing_per + labor_per
     design_pct = complexity_tier.surcharge_percentage if complexity_tier else Decimal('0')
@@ -97,7 +95,6 @@ class TransportZone(models.Model):
 class BaseBread(models.Model):
     name = models.CharField(max_length=200, verbose_name="Nombre")
     description = models.TextField(blank=True, verbose_name="Descripción")
-    base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
     is_available = models.BooleanField(default=True, verbose_name="Disponible")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
@@ -113,7 +110,7 @@ class BaseBread(models.Model):
 
     @property
     def total_cost_per_portion(self):
-        return self.cost_per_portion() + (self.base_labor_per_portion or Decimal('0'))
+        return self.cost_per_portion()
 
     def __str__(self):
         return self.name
@@ -157,7 +154,6 @@ class Filling(models.Model):
 class Topping(models.Model):
     name = models.CharField(max_length=200, verbose_name="Nombre")
     description = models.TextField(blank=True, verbose_name="Descripción")
-    base_labor_per_portion = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Mano de obra + overhead por porción (1 persona)", verbose_name="Mano de obra por porción")
     is_available = models.BooleanField(default=True, verbose_name="Disponible")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
@@ -173,7 +169,7 @@ class Topping(models.Model):
 
     @property
     def total_cost_per_portion(self):
-        return self.cost_per_portion() + (self.base_labor_per_portion or Decimal('0'))
+        return self.cost_per_portion()
 
     def __str__(self):
         return self.name
@@ -359,10 +355,8 @@ class Product(models.Model):
             topping_cost = self.topping.cost_per_portion() if self.topping else Decimal('0')
             ingredient_cost = (base_cost + filling_cost + topping_cost) * persons
 
-            base_labor = self.base_bread.base_labor_per_portion if self.base_bread else Decimal('0')
             filling_labor = self.filling.base_labor_per_portion if self.filling else Decimal('0')
-            topping_labor = self.topping.base_labor_per_portion if self.topping else Decimal('0')
-            labor_cost = (base_labor + filling_labor + topping_labor) * persons
+            labor_cost = filling_labor * persons
         else:
             ingredient_cost = self.calculate_cost() * persons
             labor_cost = (self.base_labor_per_portion or Decimal('0')) * persons

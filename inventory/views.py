@@ -693,7 +693,6 @@ def base_bread_create(request):
         b = BaseBread(
             name=request.POST.get('name', '').strip(),
             description=request.POST.get('description', '').strip(),
-            base_labor_per_portion=parse_decimal(request.POST.get('base_labor_per_portion', '0')),
             is_available=request.POST.get('is_available') == 'on',
         )
         b.save()
@@ -710,7 +709,6 @@ def base_bread_edit(request, pk):
     if request.method == 'POST':
         b.name = request.POST.get('name', b.name)
         b.description = request.POST.get('description', b.description)
-        b.base_labor_per_portion = parse_decimal(request.POST.get('base_labor_per_portion', '0'))
         b.is_available = request.POST.get('is_available') == 'on'
         b.save()
         messages.success(request, f'Base "{b.name}" actualizada.')
@@ -885,7 +883,6 @@ def topping_create(request):
         t = Topping(
             name=request.POST.get('name', '').strip(),
             description=request.POST.get('description', '').strip(),
-            base_labor_per_portion=parse_decimal(request.POST.get('base_labor_per_portion', '0')),
             is_available=request.POST.get('is_available') == 'on',
         )
         t.save()
@@ -902,7 +899,6 @@ def topping_edit(request, pk):
     if request.method == 'POST':
         t.name = request.POST.get('name', t.name)
         t.description = request.POST.get('description', t.description)
-        t.base_labor_per_portion = parse_decimal(request.POST.get('base_labor_per_portion', '0'))
         t.is_available = request.POST.get('is_available') == 'on'
         t.save()
         messages.success(request, f'Cubierta "{t.name}" actualizada.')
@@ -1537,7 +1533,7 @@ def api_calculate_price_rapido(request):
             if comp is None:
                 return None
             ing_cost = comp.cost_per_portion()
-            labor = comp.base_labor_per_portion or Decimal('0')
+            labor = getattr(comp, 'base_labor_per_portion', Decimal('0')) or Decimal('0')
             details = []
             for ing in comp.ingredients.select_related('raw_product').order_by('raw_product__name'):
                 details.append({
